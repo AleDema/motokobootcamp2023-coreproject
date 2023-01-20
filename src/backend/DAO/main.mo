@@ -10,11 +10,11 @@ import Hash "mo:base/Hash";
 import Iter "mo:base/Iter";
 import Array "mo:base/Array";
 import Time "mo:base/Time";
-//import Webpage "canister:Webpage";
 import G "./GovernanceTypes";
 import N "./neuron";
-// import Map "mo:hashmap/Map";
 import Map "../utils/Map";
+//import Webpage "canister:Webpage";
+// import Map "mo:hashmap/Map";
 
 actor {
 
@@ -26,7 +26,8 @@ actor {
     type VotingOptions = G.VotingOptions;
     type Vote = G.Vote;
     type Neuron = N.Neuron;
-    type NeuronsActions = N.NeuronsActions;
+    type NeuronsContainer = N.NeuronsContainer;
+    type NeuronActions = N.NeuronActions;
 
     let { ihash; nhash; thash; phash; calcHash } = Map;
 
@@ -154,7 +155,7 @@ actor {
             reject_votes = reject_votes;
             approve_votes = approve_votes
         };
-
+        Debug.print("end vote");
         ignore Map.put(proposals, nhash, p.id, updated_p);
         //Debug.print(debug_show (Map.get(proposals, nhash, id)));
         if (state == #approved) await execute_change(p.change_data);
@@ -306,15 +307,33 @@ actor {
 
     };
 
-    private func set_neuron_state(user : Principal, id : Nat, state : Text, new_value : NeuronsActions) : async Result.Result<Text, Text> {
+    private func process_neuron_state_change(neuron : Neuron, change : NeuronActions) : Neuron {
+        var new_neuron = neuron;
+        switch (change) {
+            case (#increase_stake(new_stake)) {
+                //todo check balance and transfer
+                new_neuron := { new_neuron with stake = new_stake }
+            };
+            case (#increase_delay(new_delay)) {
+                new_neuron := { new_neuron with dissolve_delay = new_delay }
+            };
+            case (#change_state(new_state)) {
+                new_neuron := { new_neuron with state = new_state }
+            }
+        };
+        neuron
+    };
+
+    //todo change to private
+    public func set_neuron_state(user : Principal, id : Nat, new_value : NeuronActions) : async Result.Result<Text, Text> {
         let test1 : ?NeuronsContainer = do ? {
-            let first = Map.get(neurons, phash, caller);
+            let first = Map.get(neurons, phash, user);
             first!
         };
 
         switch (test1) {
             case (?container) {
-                let neuron : ?Neuron = Array.find(
+                let neuron : ?Neuron = Array.find<Neuron>(
                     container.neurons,
                     func(n) {
                         if (n.id == id) {
@@ -326,7 +345,11 @@ actor {
                 );
                 switch (neuron) {
                     case (?neuron) {
-                        neuron.new_value : #ok("done")
+                        let new_neuron = process_neuron_state_change(neuron, new_value);
+                        var new_neurons = Array.filter<Neuron>(container.neurons, func(n) { return n.id == neuron.id });
+                        new_neurons := Array.append(new_neurons, [new_neuron]);
+                        ignore Map.put(neurons, phash, user, { current_neuron_id = container.current_neuron_id; neurons = new_neurons });
+                        #ok("done")
                     };
                     case (_) {
                         #err("neuron not found")
@@ -342,19 +365,15 @@ actor {
     };
 
     public shared ({ caller }) func dissolve_neuron(id : Nat) : async () {
-        //add to specific map?
-        // let test1 : ?NeuronsContainer = do ? {
-        //     let first = Map.get(neurons, phash, caller);
-        //     first!
-        // }
+        ignore set_neuron_state(caller, id, #change_state(#dissolving))
     };
 
     public shared ({ caller }) func stop_dissolve_neuron(id : Nat) : async () {
-
+        ignore set_neuron_state(caller, id, #change_state(#locked))
     };
 
     public shared ({ caller }) func set_neuron_lockup(id : Nat, dissolve_delay : Nat) : async () {
-
+        ignore set_neuron_state(caller, id, #increase_delay(dissolve_delay))
     };
 
     public shared ({ caller }) func completely_dissolve_neuron(id : Nat) : async () {
