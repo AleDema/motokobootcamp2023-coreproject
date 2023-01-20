@@ -12,11 +12,15 @@ import Array "mo:base/Array";
 import Time "mo:base/Time";
 import G "./GovernanceTypes";
 import N "./neuron";
+import TU "../utils/time";
 import Map "../utils/Map";
 //import Webpage "canister:Webpage";
 // import Map "mo:hashmap/Map";
 
 actor {
+
+    public type AccountIdentifier = Blob;
+    public type Subaccount = Blob;
 
     type VotingPowerLogic = G.VotingPowerLogic;
     type ProposalId = G.ProposalId;
@@ -41,11 +45,16 @@ actor {
     private stable var proposal_id_counter = 0;
     private stable let proposals = Map.new<Nat, Proposal>();
     private stable let user_votes = Map.new<Principal, Map.Map<ProposalId, Vote>>();
-    private stable let neurons = Map.new<Principal, NeuronsContainer>(); //TODO rethink this struct
+    private stable let neurons = Map.new<Principal, NeuronsContainer>();
     private stable let user_balances = Map.new<Principal, Float>();
 
+    public shared ({ caller }) func whoami() : async Principal {
+        Debug.print(debug_show (caller));
+        return caller
+    };
+
     public shared (msg) func submit_proposal(title : Text, description : Text, change : ProposalType) : async () {
-        if (verify_balance(msg.caller) < MIN_VP_REQUIRED) return;
+        if (verify_balance(msg.caller) < Float.fromInt(MIN_VP_REQUIRED)) return;
 
         //TODO input validation
 
@@ -87,7 +96,7 @@ actor {
         Debug.print(debug_show (choice));
 
         let user_vp = get_voting_power(caller);
-        if (user_vp <= MIN_VP_REQUIRED) return;
+        if (user_vp <= Float.fromInt(MIN_VP_REQUIRED)) return;
 
         let p : Proposal = do {
             switch (Map.get(proposals, nhash, id)) {
@@ -137,13 +146,13 @@ actor {
         var reject_votes = p.reject_votes;
         switch choice {
             case (#approve) {
-                if (p.approve_votes + user_vp >= PROPOSAL_VP_THESHOLD) {
+                if (p.approve_votes + user_vp >= Float.fromInt(PROPOSAL_VP_THESHOLD)) {
                     state := #approved
                 };
                 approve_votes := p.approve_votes + user_vp
             };
             case (#reject) {
-                if (p.reject_votes + user_vp >= PROPOSAL_VP_THESHOLD) {
+                if (p.reject_votes + user_vp >= Float.fromInt(PROPOSAL_VP_THESHOLD)) {
                     state := #rejected
                 };
                 reject_votes := p.reject_votes + user_vp
@@ -160,37 +169,6 @@ actor {
         //Debug.print(debug_show (Map.get(proposals, nhash, id)));
         if (state == #approved) await execute_change(p.change_data);
 
-    };
-
-    //TODO actually implement this
-    private func verify_balance(user : Principal) : Nat {
-        if (DEV_MODE) {
-            return 10
-        } else return 10; //TODO
-
-    };
-
-    private func get_voting_power(user : Principal) : Nat {
-        switch (current_vp_mode) {
-            case (#basic) verify_balance(user);
-            case (#advanced) get_neurons_vp(user)
-        }
-    };
-
-    private func get_neurons_vp(user : Principal) : Nat {
-        var vp = 0;
-        if (DEV_MODE) {
-            vp := 10
-        } else vp := 10; //TODO
-
-        if (IS_QUADRATIC) {
-            // damn numerical conversions
-            // var ftval = Float.fromInt(vp);
-            // var sqr = Float.sqrt(ftval);
-            // let i64_vp = Float.toInt64(sqr)
-        };
-
-        return vp
     };
 
     private func execute_change(change : ProposalType) : async () {
@@ -215,12 +193,24 @@ actor {
         }
     };
 
-    //todo
-    public shared ({ caller }) func deposit(amount : Float) : async () {
+    //TODO actually implement this
+    private func verify_balance(user : Principal) : Float {
+        if (DEV_MODE) {
+            return 100
+        } else return 10; //TODO
 
+    };
+
+    //todo
+    public shared ({ caller }) func check_deposit(address : Subaccount) : async Float {
+        0.0
     };
     //todo
     public shared ({ caller }) func withdraw(amount : Float, address : Principal) : async () {
+
+    };
+
+    public shared ({ caller }) func generate_deposit_address() : async () {
 
     };
 
@@ -245,6 +235,10 @@ actor {
     };
 
     public shared ({ caller }) func get_user_neurons() : async Result.Result<NeuronsContainer, Text> {
+        get_user_neurons_internal(caller)
+    };
+
+    private func get_user_neurons_internal(caller : Principal) : Result.Result<NeuronsContainer, Text> {
         let test1 : ?NeuronsContainer = do ? {
             let first = Map.get(neurons, phash, caller);
             first!
@@ -266,7 +260,7 @@ actor {
             if (not has_enough_balance(caller, stake)) return
         };
 
-        //internal_transfer
+        //internal_transfer TODO
 
         //create neuron Map.new<Principal, (Nat, [Neuron])>()
         let test1 : ?NeuronsContainer = do ? {
@@ -281,6 +275,7 @@ actor {
             id = id;
             stake = stake;
             state = #locked;
+            dissolve_start = null;
             creation_date = Time.now();
             dissolve_delay = dissolve_delay
         };
@@ -315,13 +310,23 @@ actor {
                 new_neuron := { new_neuron with stake = new_stake }
             };
             case (#increase_delay(new_delay)) {
+                //check if dissolving
                 new_neuron := { new_neuron with dissolve_delay = new_delay }
             };
             case (#change_state(new_state)) {
+                // check if can be dissolved
                 new_neuron := { new_neuron with state = new_state }
             }
         };
         neuron
+    };
+
+    private func can_dissolve(neuron : Neuron) : Bool {
+        return true
+    };
+
+    private func time_since_dissolve_start(dissolve_start : Nat) : Nat {
+        return 0
     };
 
     //todo change to private
@@ -376,12 +381,118 @@ actor {
         ignore set_neuron_state(caller, id, #increase_delay(dissolve_delay))
     };
 
+    //check dissolve condition TODO
     public shared ({ caller }) func completely_dissolve_neuron(id : Nat) : async () {
-        //internal_transfer
+        var reimburse_amount : Float = delete_neuron(caller, id);
+        //delete neuron
+
+        //internal_transfer TODO
     };
 
-    public func calculate_neuron_vp(owner : Principal, id : Nat) : async Float {
-        return 1.0
+    //todo remove public and async
+    func delete_neuron(user : Principal, id : Nat) : Float {
+        var reimburse_amount : Float = 0;
+        let test1 : ?NeuronsContainer = do ? {
+            let first = Map.get(neurons, phash, user);
+            first!
+        };
+
+        switch (test1) {
+            case (?container) {
+                let new_neurons = Array.filter<Neuron>(
+                    container.neurons,
+                    func(n) {
+                        if (n.id != id) {
+                            return true
+                        } else {
+                            reimburse_amount := n.stake;
+                            return false
+                        }
+
+                    },
+                );
+
+                ignore Map.put(neurons, phash, user, { current_neuron_id = container.current_neuron_id; neurons = new_neurons })
+            };
+            case (_) {
+
+            }
+        };
+        reimburse_amount
+    };
+
+    private func get_voting_power(user : Principal) : Float {
+        switch (current_vp_mode) {
+            case (#basic) verify_balance(user);
+            case (#advanced) { calculate_user_vp(user) } //todo wrap
+        }
+    };
+
+    private func get_neurons_vp(user : Principal) : Float {
+        var vp : Float = 0;
+        if (DEV_MODE) {
+            vp := 10
+        } else vp := 10; //TODO
+
+        if (IS_QUADRATIC) {
+            // var ftval = Float.fromInt(vp);
+            var sqr = Float.sqrt(vp);
+            // let i64_vp = Float.toInt64(sqr)
+        };
+
+        return vp
+    };
+
+    private func calculate_user_vp(caller : Principal) : Float {
+        let neurons = get_user_neurons_internal(caller);
+        var vp : Float = 0;
+        switch (neurons) {
+            case (#ok(neuron_container)) {
+                for (neuron in neuron_container.neurons.vals()) {
+                    vp := vp + calculate_neuron_vp(neuron)
+                }
+            };
+            case (#err(text)) {
+                vp := 0.0
+            }
+        };
+
+        vp
+    };
+
+    var MIN_LOCKUP_MONTHS = 6;
+    var MAX_LOCKUP_MONTHS = 12 * 8;
+    var LOCKUP_BONUS_START = 1.06;
+    var LOCKUP_BONUS_END = 2;
+    var MAX_AGE_BONUS = 4;
+    var AGE_BONUS_START = 1.0;
+    var AGE_BONUS_END = 1.25;
+
+    private func calculate_neuron_vp(neuron : Neuron) : Float {
+        var lockup_bonus = LOCKUP_BONUS_START;
+        var age_bonus = AGE_BONUS_START;
+        var stake = neuron.stake;
+
+        if (IS_QUADRATIC) {
+            // var ftval = Float.fromInt(vp);
+            stake := Float.sqrt(stake);
+            // let i64_vp = Float.toInt64(sqr)
+        };
+
+        if (neuron.state == #dissolving) {
+            age_bonus := 1.0
+        };
+
+        //todo time conversion
+        if (TU.daysFromEpoch(neuron.dissolve_delay) < MIN_LOCKUP_MONTHS * 30) {
+            return 0
+        };
+
+        if (TU.daysFromEpoch(neuron.dissolve_delay) - TU.daysFromEpoch(Option.get(neuron.dissolve_start, 0)) > MIN_LOCKUP_MONTHS * 30) {
+
+        };
+
+        return stake * age_bonus * lockup_bonus
     };
 
     //advanced

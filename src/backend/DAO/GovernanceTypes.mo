@@ -10,8 +10,8 @@ module GovernanceTypes {
         title : Text;
         description : Text;
         state : ProposalState;
-        approve_votes : Nat;
-        reject_votes : Nat;
+        approve_votes : Float;
+        reject_votes : Float;
         change_data : ProposalType
     };
 
@@ -22,7 +22,7 @@ module GovernanceTypes {
         #update_min_vp : Nat; //just nat
         #update_threshold : Nat; //just nat
         #toggle_quadratic;
-        #create_lottery : (Nat, Nat, Nat, Nat) // amount, price per, share %, winning %
+        #create_lottery : (Float, Float, Float, Float) // amount, price per, share %, winning %
     };
 
     public type ProposalState = {
@@ -37,7 +37,7 @@ module GovernanceTypes {
     };
 
     public type Vote = {
-        voting_power : Nat;
+        voting_power : Float;
         vote : VotingOptions
     }
 }

@@ -9,7 +9,7 @@ import Error "mo:base/Error";
 import Buffer "mo:base/Buffer";
 import Principal "mo:base/Principal";
 import CertifiedData "mo:base/CertifiedData";
-import SHA256 "mo:sha256/SHA256";
+import SHA256 "./SHA256";
 
 actor Webpage {
 

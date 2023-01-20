@@ -10,7 +10,7 @@ import "@connect2ic/core/style.css"
 /*
  * Import canister definitions like this:
  */
-import * as declarations from "@declarations/DAO"
+// import * as declarations from "../../declarations/*"
 /*
  * Some examples to get you started
  */
@@ -21,13 +21,16 @@ import Home from '@pages/Home';
 import DaoPage from '@pages/DaoPage';
 import ErrorPage from '@pages/ErrorPage';
 import RootLayout from '@layouts/RootLayout';
+import { useCanister } from "@connect2ic/react"
+import { PlugWallet } from "@connect2ic/core/providers/plug-wallet"
 
 //STATE
 import { useSnapshot } from 'valtio'
 import state from "@context/global"
 
-//CANISTER
-import { DAO } from "@declarations/DAO"
+// //CANISTER
+// import { DAO } from "@declarations/DAO"
+import * as DAO from "../../../.dfx/local/canisters/DAO"
 
 //ROUTING
 import { createRoutesFromElements, Link } from "react-router-dom";
@@ -43,21 +46,23 @@ function App() {
   const snap = useSnapshot(state)
 
   const [count, setCount] = useState<bigint>()
-  const { isConnected, disconnect } = useConnect();
+  const { isConnected, disconnect, activeProvider } = useConnect();
+  const [auth_dao, { loading, error }] = useCanister("DAO")
 
   // const refreshCounter = async () => {
   //   const freshCount = await DAO.getValue() as bigint
   //   setCount(freshCount)
   // }
 
-  // const increment = async () => {
-  //   //setCount(count++)
-  //   await DAO.increment()
-  //   await refreshCounter()
-  // }
+  const whoami = async () => {
+    //setCount(count++)
+    console.log(auth_dao)
+    await auth_dao.whoami()
+    console.log(await auth_dao.whoami())
+  }
 
   useEffect(() => {
-    //refreshCounter();
+
   }, [])
 
   return (
@@ -68,6 +73,7 @@ function App() {
       <h1 className="text-5xl">Bootcamp DAO</h1>
       <div className="space-x-4">
       </div>
+      <button onClick={whoami}>get id</button>
 
       <div>
         <Profile />
@@ -82,9 +88,11 @@ function App() {
 
 const client = createClient({
   canisters: {
-    declarations,
+    DAO
   },
-  providers: defaultProviders,
+  providers: [
+    new PlugWallet(),
+  ],
   globalProviderConfig: {
     dev: import.meta.env.DEV,
   },

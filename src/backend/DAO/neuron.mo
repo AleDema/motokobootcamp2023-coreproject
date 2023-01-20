@@ -14,7 +14,8 @@ module {
     public type Neuron = {
         id : Nat;
         stake : Float;
-        creation_date : Int;
+        creation_date : Int; //timestamp
+        dissolve_start : ?Nat; //timestamp
         dissolve_delay : Nat; //days
         state : NeuronState
     };

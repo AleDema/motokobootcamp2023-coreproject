@@ -9,9 +9,9 @@ module TimeUtils {
         #days
     };
 
-    func secsToNanos(s : Int) : Int { 1_000_000_000 * s };
+    public func secsToNanos(s : Int) : Int { 1_000_000_000 * s };
 
-    func daysFromEpoch(timestamp : Time.Time) : Int {
+    public func daysFromEpoch(timestamp : Time.Time) : Int {
         var to_seconds = timestamp / 1_000_000_000;
         var daysPassed = to_seconds / 60 / 60 / 24;
         Debug.print(debug_show (timestamp));
@@ -19,7 +19,7 @@ module TimeUtils {
         return daysPassed
     };
 
-    func hoursFromEpoch(timestamp : Time.Time) : Int {
+    public func hoursFromEpoch(timestamp : Time.Time) : Int {
         if (timestamp < 1) return 0;
         var hoursPassed = timestamp / 60 / 60 / 1_000_000_000;
         Debug.print(debug_show (timestamp));
@@ -27,7 +27,7 @@ module TimeUtils {
         return hoursPassed
     };
 
-    func timeFromEpoc(timestamp : Time.Time, timeframe : TF) : Int {
+    public func timeFromEpoc(timestamp : Time.Time, timeframe : TF) : Int {
         let normalize = timestamp / 1_000_000_000;
         switch (timeframe) {
             case (#minutes) normalize / 60;
@@ -36,7 +36,7 @@ module TimeUtils {
         }
     };
 
-    func timeframeToNanos(n : Time.Time, timeframe : TF) : Int {
+    public func timeframeToNanos(n : Time.Time, timeframe : TF) : Int {
         let normalize = n * 1_000_000_000;
         switch (timeframe) {
             case (#minutes) normalize * 60;
@@ -45,7 +45,7 @@ module TimeUtils {
         }
     };
 
-    func getTimePassed(recent_timestamp : Time.Time, old_timestamp : Time.Time, timeframe : TF) : Int {
+    public func getTimePassed(recent_timestamp : Time.Time, old_timestamp : Time.Time, timeframe : TF) : Int {
         if (old_timestamp == 0) return recent_timestamp;
         timeFromEpoc(recent_timestamp, timeframe) - timeFromEpoc(old_timestamp, timeframe)
     };

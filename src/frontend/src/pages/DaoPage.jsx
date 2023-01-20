@@ -16,6 +16,7 @@ const options = [
 
 const DaoPage = () => {
 
+    const snap = useSnapshot(state)
     const [proposals, setProposals] = useState([{}]);
     const [proposalTitle, setProposalTitle] = useState("");
     const [proposalDescription, setProposalDescription] = useState("");
@@ -48,6 +49,7 @@ const DaoPage = () => {
 
     return (
         <div>
+            <p>{snap.principal}</p>
             <div className="flex flex-col items-center">
                 {proposals.map(function (e, i) {
                     return (<Link to={`/proposal${e.id}`} key={e.id}>{e.title + " " + e.id}</Link>)
