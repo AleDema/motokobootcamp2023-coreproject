@@ -5,12 +5,23 @@ module {
         #dissolved
     };
 
+    public type NeuronActions = {
+        #increase_stake : Float;
+        #increase_delay : Nat;
+        #change_state : NeuronState
+    };
+
     public type Neuron = {
         id : Nat;
-        stake : Nat;
-        creation_date : Nat;
-        dissolve_delay : Nat;
+        stake : Float;
+        creation_date : Int;
+        dissolve_delay : Nat; //days
         state : NeuronState
-    }
+    };
+
+    public type NeuronsContainer = {
+        current_neuron_id : Nat;
+        neurons : [Neuron]
+    };
 
 }

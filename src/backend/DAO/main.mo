@@ -8,6 +8,8 @@ import Nat "mo:base/Nat";
 import Float "mo:base/Float";
 import Hash "mo:base/Hash";
 import Iter "mo:base/Iter";
+import Array "mo:base/Array";
+import Time "mo:base/Time";
 //import Webpage "canister:Webpage";
 import G "./GovernanceTypes";
 import N "./neuron";
@@ -24,6 +26,7 @@ actor {
     type VotingOptions = G.VotingOptions;
     type Vote = G.Vote;
     type Neuron = N.Neuron;
+    type NeuronsActions = N.NeuronsActions;
 
     let { ihash; nhash; thash; phash; calcHash } = Map;
 
@@ -37,11 +40,13 @@ actor {
     private stable var proposal_id_counter = 0;
     private stable let proposals = Map.new<Nat, Proposal>();
     private stable let user_votes = Map.new<Principal, Map.Map<ProposalId, Vote>>();
-    private stable let neurons = Map.new<Principal, [Neuron]>(); //TODO rethink this struct
+    private stable let neurons = Map.new<Principal, NeuronsContainer>(); //TODO rethink this struct
     private stable let user_balances = Map.new<Principal, Float>();
 
     public shared (msg) func submit_proposal(title : Text, description : Text, change : ProposalType) : async () {
         if (verify_balance(msg.caller) < MIN_VP_REQUIRED) return;
+
+        //TODO input validation
 
         let p : Proposal = {
             id = proposal_id_counter;
@@ -233,13 +238,115 @@ actor {
         }
     };
 
+    public func get_neurons() : async [NeuronsContainer] {
+        let iter = Map.vals<Principal, NeuronsContainer>(neurons);
+        Iter.toArray(iter)
+    };
+
+    public shared ({ caller }) func get_user_neurons() : async Result.Result<NeuronsContainer, Text> {
+        let test1 : ?NeuronsContainer = do ? {
+            let first = Map.get(neurons, phash, caller);
+            first!
+        };
+
+        switch (test1) {
+            case (?container) {
+                #ok(container)
+            };
+            case (_) {
+                #err("No Neurons found")
+            }
+        }
+    };
+
     public shared ({ caller }) func create_neuron(stake : Float, dissolve_delay : Nat) : async () {
         //has_enough_balance
+        if (not DEV_MODE) {
+            if (not has_enough_balance(caller, stake)) return
+        };
+
         //internal_transfer
+
+        //create neuron Map.new<Principal, (Nat, [Neuron])>()
+        let test1 : ?NeuronsContainer = do ? {
+            let first = Map.get(neurons, phash, caller);
+            first!
+        };
+
+        var neurons_temp : [Neuron] = [];
+        var id = 0;
+
+        var neuron : Neuron = {
+            id = id;
+            stake = stake;
+            state = #locked;
+            creation_date = Time.now();
+            dissolve_delay = dissolve_delay
+        };
+
+        switch (test1) {
+            case (?record) {
+                //if user already has at least 1 neuron
+                neuron := { neuron with id = record.current_neuron_id };
+                id := record.current_neuron_id;
+                neurons_temp := Array.append(record.neurons, [neuron])
+
+            };
+            case (_) {
+                neurons_temp := [neuron]
+            }
+        };
+
+        let neurons_container : NeuronsContainer = {
+            current_neuron_id : Nat = id + 1;
+            neurons = neurons_temp
+        };
+
+        ignore Map.put(neurons, phash, caller, neurons_container)
+
+    };
+
+    private func set_neuron_state(user : Principal, id : Nat, state : Text, new_value : NeuronsActions) : async Result.Result<Text, Text> {
+        let test1 : ?NeuronsContainer = do ? {
+            let first = Map.get(neurons, phash, caller);
+            first!
+        };
+
+        switch (test1) {
+            case (?container) {
+                let neuron : ?Neuron = Array.find(
+                    container.neurons,
+                    func(n) {
+                        if (n.id == id) {
+                            return true
+                        } else {
+                            return false
+                        }
+                    },
+                );
+                switch (neuron) {
+                    case (?neuron) {
+                        neuron.new_value : #ok("done")
+                    };
+                    case (_) {
+                        #err("neuron not found")
+                    }
+                }
+
+            };
+            case (_) {
+                return #err("Dont have neurons")
+            }
+        }
+
     };
 
     public shared ({ caller }) func dissolve_neuron(id : Nat) : async () {
-        //add to specific map
+        //add to specific map?
+        // let test1 : ?NeuronsContainer = do ? {
+        //     let first = Map.get(neurons, phash, caller);
+        //     first!
+        // }
     };
 
     public shared ({ caller }) func stop_dissolve_neuron(id : Nat) : async () {
