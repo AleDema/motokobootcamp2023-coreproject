@@ -1,0 +1,48 @@
+{
+  "compilerOptions": {
+    "target": "es2020",
+    "lib": [
+      "DOM",
+      "DOM.Iterable",
+      "ES2020"
+    ],
+    "types": [
+      "vite/client"
+    ],
+    "allowJs": true,
+    "skipLibCheck": true,
+    "esModuleInterop": false,
+    "allowSyntheticDefaultImports": true,
+    "strict": false,
+    "forceConsistentCasingInFileNames": true,
+    "module": "es2020",
+    "moduleResolution": "Node",
+    "resolveJsonModule": true,
+    "isolatedModules": true,
+    "noEmit": true,
+    "jsx": "react",
+    "checkJs": true,
+    "baseUrl": "./",
+    "paths": {
+      "@components/*": [
+        "src/frontend/src/components/*"
+      ],
+      "@pages/*": [
+        "src/frontend/src/pages/*"
+      ],
+      "@layouts/*": [
+        "src/frontend/src/layouts/*"
+      ],
+      "@context/*": [
+        "src/frontend/src/context/*"
+      ],
+      "@declarations/*": [
+        "src/declarations/*"
+      ]
+    }
+  },
+  "include": [
+    "src/frontend",
+    "vite.config.ts"
+  ]
+}

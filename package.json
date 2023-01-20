@@ -1,0 +1,42 @@
+{
+  "name": "ic-app-react-ts",
+  "version": "0.9.0",
+  "description": "Internet Computer starter application",
+  "keywords": [
+    "Internet Computer",
+    "Motoko",
+    "JavaScript",
+    "Canister"
+  ],
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build --emptyOutDir",
+    "serve": "vite preview",
+    "predev": "dfx deploy DAO; dfx deploy Webpage; npm run generate;",
+    "postdev": "dfx stop",
+    "generate": "dfx generate DAO; dfx generate Webpage;",
+    "prebuild": "npm run generate",
+    "start": "npm run dev"
+  },
+  "dependencies": {
+    "@connect2ic/core": "^0.1.6",
+    "@connect2ic/react": "^0.1.4",
+    "@dfinity/agent": "^0.11.3",
+    "react": "^18.2.0",
+    "react-dom": "^18.2.0",
+    "react-router-dom": "^6.4.1",
+    "valtio": "^1.7.0"
+  },
+  "devDependencies": {
+    "@types/node": "^17.0.36",
+    "@types/react": "^18.0.9",
+    "@types/react-dom": "^18.0.5",
+    "@vitejs/plugin-react": "^2.0.0",
+    "autoprefixer": "^10.4.12",
+    "buffer": "^6.0.3",
+    "postcss": "^8.4.17",
+    "tailwindcss": "^3.1.8",
+    "typescript": "^4.4.3",
+    "vite": "^3.0.4"
+  }
+}

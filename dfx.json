@@ -1,0 +1,56 @@
+{
+  "canisters": {
+    "DAO": {
+      "main": "src/backend/DAO/main.mo",
+      "type": "motoko",
+      "dependencies": [
+        "Webpage"
+      ]
+    },
+    "Webpage": {
+      "main": "src/backend/Webpage/webpage.mo",
+      "type": "motoko"
+    },
+    "ledger": {
+      "type": "motoko",
+      "main": "src/backend/ledger/Canisters/Token.mo",
+      "remote": {
+        "id": {
+          "ic": "db3eq-6iaaa-aaaah-abz6a-cai"
+        }
+      }
+    },
+    "frontend": {
+      "dependencies": [
+        "DAO",
+        "Webpage"
+      ],
+      "frontend": {
+        "entrypoint": "dist/index.html"
+      },
+      "source": [
+        "dist/",
+        "src/frontend/assets"
+      ],
+      "type": "assets"
+    }
+  },
+  "defaults": {
+    "build": {
+      "packtool": "vessel sources"
+    }
+  },
+  "networks": {
+    "local": {
+      "bind": "127.0.0.1:8000",
+      "type": "ephemeral"
+    },
+    "ic": {
+      "providers": [
+        "https://mainnet.dfinity.network"
+      ],
+      "type": "persistent"
+    }
+  },
+  "version": 1
+}
