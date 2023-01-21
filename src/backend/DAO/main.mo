@@ -80,7 +80,8 @@ shared actor class DAO() = this {
     };
 
     public shared (msg) func submit_proposal(title : Text, description : Text, change : ProposalType) : async () {
-        //check anony principal TODO
+        if (A.isAnonymous(msg.caller)) return;
+
         let vp = await get_voting_power(msg.caller);
         if (vp < Float.fromInt(MIN_VP_REQUIRED)) return;
 
@@ -118,7 +119,7 @@ shared actor class DAO() = this {
     };
 
     public shared ({ caller }) func vote(id : ProposalId, choice : VotingOptions) : async () {
-
+        if (A.isAnonymous(caller)) return;
         Debug.print("vote");
         Debug.print(debug_show (id));
         Debug.print(debug_show (choice));
@@ -240,6 +241,7 @@ shared actor class DAO() = this {
     };
     //TEST
     public shared ({ caller }) func withdraw(address : Principal, amount : Float) : async () {
+        if (A.isAnonymous(caller)) return;
         if (has_enough_balance(address, amount)) {
             ignore Map.put(user_balances, phash, address, get_user_internal_balance(address) - amount);
             //ledger transfer
@@ -368,7 +370,7 @@ shared actor class DAO() = this {
                 }
             };
             case (#increase_delay(new_delay)) {
-                //check if dissolving TODO
+                //check if dissolving TEST
                 if (neuron.state == #locked) {
                     new_neuron := {
                         new_neuron with dissolve_delay = new_delay
@@ -397,8 +399,46 @@ shared actor class DAO() = this {
         neuron
     };
 
-    private func can_dissolve(owner : Principal, id : Nat) : Bool {
-        return true
+    private func can_dissolve(owner : Principal, id : Nat) : Result.Result<Bool, Text> {
+        let test1 : ?NeuronsContainer = do ? {
+            let first = Map.get(neurons, phash, owner);
+            first!
+        };
+
+        switch (test1) {
+            case (?container) {
+                let neuron : ?Neuron = Array.find<Neuron>(
+                    container.neurons,
+                    func(n) {
+                        if (n.id == id) {
+                            return true
+                        } else {
+                            return false
+                        }
+                    },
+                );
+                switch (neuron) {
+                    case (?neuron) {
+                        if (neuron.state == #locked) {
+                            #ok(false)
+                        } else {
+                            if (neuron.dissolve_delay - Option.get(neuron.dissolve_start, 0) > 0) {
+                                #ok(false)
+                            } else {
+                                #ok(true)
+                            }
+                        }
+                    };
+                    case (_) {
+                        #err("neuron not found")
+                    }
+                }
+
+            };
+            case (_) {
+                return #err("Dont have neurons")
+            }
+        }
     };
 
     private func time_since_dissolve_start(dissolve_start : Nat) : Nat {
@@ -457,14 +497,22 @@ shared actor class DAO() = this {
         ignore set_neuron_state(caller, id, #increase_delay(dissolve_delay))
     };
 
-    //check dissolve condition TODO
-    public shared ({ caller }) func completely_dissolve_neuron(id : Nat) : async () {
-        if (can_dissolve(caller, id)) {
-            //delete neuron
-            var reimburse_amount : Float = delete_neuron(caller, id);
+    //check dissolve condition TEST
+    public shared ({ caller }) func completely_dissolve_neuron(id : Nat) : async Result.Result<Bool, Text> {
 
-            //internal_transfer TEST
-            internal_transfer(Principal.fromActor(this), caller, reimburse_amount)
+        switch (can_dissolve(caller, id)) {
+            case (#ok(true)) {
+                //delete neuron
+                var reimburse_amount : Float = delete_neuron(caller, id);
+
+                //internal_transfer TEST
+                internal_transfer(Principal.fromActor(this), caller, reimburse_amount);
+                return #ok(true)
+            };
+            case (#ok(false)) { return #ok(false) };
+            case (#err(msg)) {
+                return #err(msg)
+            }
         }
     };
 
@@ -537,6 +585,7 @@ shared actor class DAO() = this {
     var AGE_BONUS_START = 1.0;
     var AGE_BONUS_END = 1.25;
 
+    //TEST
     private func calculate_neuron_vp(neuron : Neuron) : Float {
         var lockup_bonus = LOCKUP_BONUS_START;
         var age_bonus = AGE_BONUS_START;

@@ -11,6 +11,10 @@ import Principal "mo:base/Principal";
 
 module Identity {
 
+    public func isAnonymous(caller : Principal) : Bool {
+        Principal.equal(caller, Principal.fromText("2vxsx-fae"))
+    };
+
     public func isCanisterPrincipal(p : Principal) : Bool {
         let principal_text = Principal.toText(p);
         let correct_length = Text.size(principal_text) == 27;
