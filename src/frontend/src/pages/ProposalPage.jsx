@@ -3,6 +3,7 @@ import React from 'react';
 import { useSnapshot } from 'valtio'
 import state from "../context/global"
 import { useParams } from "react-router-dom";
+import { useCanister } from "@connect2ic/react"
 
 //CANISTER
 import { DAO } from "@declarations/DAO"
@@ -14,11 +15,12 @@ const VotingOptions = {
 
 const ProposalPage = () => {
 
+    const [auth_dao, { loading, error }] = useCanister("DAO")
     const [proposal, setProposal] = React.useState({});
     let { id } = useParams();
 
     const fetchProposal = async (id) => {
-        let value = await DAO.get_proposal(id);
+        let value = await auth_dao.get_proposal(id);
         if (value !== null && value !== undefined)
             setProposal(value.ok)
         console.log(id)
@@ -27,13 +29,13 @@ const ProposalPage = () => {
 
     const accept = async () => {
         let n = BigInt(parseInt(id));
-        DAO.vote(n, { approve: null })
+        auth_dao.vote(n, { approve: null })
         //ghetto solution
         setTimeout(() => fetchProposal(n), 2000);
     }
     const reject = async () => {
         let n = BigInt(parseInt(id));
-        DAO.vote(n, { reject: null })
+        auth_dao.vote(n, { reject: null })
         setTimeout(() => fetchProposal(n), 2000);
     }
 
