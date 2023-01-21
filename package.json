@@ -12,9 +12,9 @@
     "dev": "vite",
     "build": "tsc && vite build --emptyOutDir",
     "serve": "vite preview",
-    "predev": "dfx deploy ; npm run generate;",
+    "predev": "dfx deploy DAO; npm run generate;",
     "postdev": "dfx stop",
-    "generate": "dfx generate DAO; dfx generate Webpage; dfx generate ledger;",
+    "generate": "dfx generate DAO;",
     "prebuild": "npm run generate",
     "start": "npm run dev"
   },

@@ -21,7 +21,7 @@
     "isolatedModules": true,
     "noEmit": true,
     "jsx": "react",
-    "checkJs": true,
+    "checkJs": false,
     "baseUrl": "./",
     "paths": {
       "@components/*": [
