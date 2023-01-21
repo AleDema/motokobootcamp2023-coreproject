@@ -81,7 +81,8 @@ shared actor class DAO() = this {
         proposal_vp_threshold : Nat;
         is_quadratic : Bool;
         current_vp_mode : VotingPowerLogic;
-        my_vp : Float
+        my_vp : Float;
+        internal_balance : Float
 
     };
 
@@ -92,8 +93,8 @@ shared actor class DAO() = this {
             proposal_vp_threshold = PROPOSAL_VP_THESHOLD;
             is_quadratic = IS_QUADRATIC;
             current_vp_mode = current_vp_mode;
-            my_vp = await get_voting_power(caller)
-
+            my_vp = await get_voting_power(caller);
+            internal_balance = get_user_internal_balance(caller)
         };
         Debug.print(debug_show (caller));
         // Debug.print(debug_show (debug_data));
@@ -283,16 +284,22 @@ shared actor class DAO() = this {
         }
     };
 
-    public shared ({ caller }) func generate_deposit_address() : async AccountIdentifier {
-        A.accountIdentifier(caller, A.defaultSubaccount())
+    private func generate_deposit_address(owner : Principal) : AccountIdentifier {
+        A.accountIdentifier(Principal.fromActor(this), A.principalToSubaccount(owner))
     };
 
     type DepositAddressInfo = {
         principal : Principal;
-        subaccount : Subaccount
+        subaccount : Subaccount;
+        accountid : AccountIdentifier
     };
+
     public shared ({ caller }) func get_deposit_address_info() : async DepositAddressInfo {
-        return { principal = caller; subaccount = A.defaultSubaccount() }
+        return {
+            principal = Principal.fromActor(this);
+            subaccount = A.principalToSubaccount(caller);
+            accountid = generate_deposit_address(caller)
+        }
     };
 
     private func internal_transfer(from : Principal, to : Principal, amount : Float) : () {
@@ -302,8 +309,12 @@ shared actor class DAO() = this {
         }
     };
 
-    public shared func add_balance_debug(to : Principal, amount : Float) : async () {
+    public func add_balance_debug_to_principal(to : Principal, amount : Float) : async () {
         ignore Map.put(user_balances, phash, to, get_user_internal_balance(to) + amount)
+    };
+
+    public shared ({ caller }) func add_balance_debug(amount : Float) : async () {
+        await add_balance_debug_to_principal(caller, amount)
     };
 
     private func has_enough_balance(user : Principal, amount : Float) : Bool {
