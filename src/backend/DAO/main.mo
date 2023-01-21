@@ -302,6 +302,10 @@ shared actor class DAO() = this {
         }
     };
 
+    public shared func add_balance_debug(to : Principal, amount : Float) : async () {
+        ignore Map.put(user_balances, phash, to, get_user_internal_balance(to) + amount)
+    };
+
     private func has_enough_balance(user : Principal, amount : Float) : Bool {
         let balance = get_user_internal_balance(user);
         if (balance - amount >= 0) { return true } else { return false }
@@ -345,9 +349,7 @@ shared actor class DAO() = this {
 
     public shared ({ caller }) func create_neuron(stake : Float, dissolve_delay : Nat) : async () {
         //has_enough_balance
-        if (not DEV_MODE) {
-            if (not has_enough_balance(caller, stake)) return
-        };
+        if (not has_enough_balance(caller, stake)) return
 
         //internal_transfer
         internal_transfer(caller, Principal.fromActor(this), stake);
@@ -474,10 +476,6 @@ shared actor class DAO() = this {
                 return #err("Dont have neurons")
             }
         }
-    };
-
-    private func time_since_dissolve_start(dissolve_start : Nat) : Nat {
-        return 0
     };
 
     //CHORE change to private
