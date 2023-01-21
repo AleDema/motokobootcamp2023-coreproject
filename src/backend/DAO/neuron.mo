@@ -1,8 +1,7 @@
 module {
     public type NeuronState = {
         #locked;
-        #dissolving;
-        #dissolved
+        #dissolving
     };
 
     public type NeuronActions = {
@@ -15,8 +14,8 @@ module {
         id : Nat;
         stake : Float;
         creation_date : Int; //timestamp
-        dissolve_start : ?Nat; //timestamp
-        dissolve_delay : Nat; //days
+        dissolve_start : ?Int; //timestamp
+        dissolve_delay : Int; //days
         state : NeuronState
     };
 

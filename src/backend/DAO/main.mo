@@ -199,6 +199,7 @@ shared actor class DAO() = this {
 
     };
 
+    // modify_parameters
     private func execute_change(change : ProposalType) : async () {
         //TEST proposal types
         switch (change) {
@@ -224,7 +225,7 @@ shared actor class DAO() = this {
         IS_QUADRATIC := not IS_QUADRATIC
     };
 
-    public func verify_balance(user : Principal) : async Float {
+    public func get_default_ledger_balance(user : Principal) : async Float {
         normalize_ledger_balance(await icrc_canister.icrc1_balance_of({ owner = user; subaccount = null }))
     };
 
@@ -368,11 +369,29 @@ shared actor class DAO() = this {
             };
             case (#increase_delay(new_delay)) {
                 //check if dissolving TODO
-                new_neuron := { new_neuron with dissolve_delay = new_delay }
+                if (neuron.state == #locked) {
+                    new_neuron := {
+                        new_neuron with dissolve_delay = new_delay
+                    }
+                }
             };
             case (#change_state(new_state)) {
                 // check if can be dissolved
-                new_neuron := { new_neuron with state = new_state }
+                switch (new_state) {
+                    case (#dissolving) {
+                        new_neuron := {
+                            new_neuron with state = new_state;
+                            dissolve_start = ?Time.now()
+                        }
+                    };
+                    case (#locked) {
+                        new_neuron := {
+                            new_neuron with state = new_state;
+                            dissolve_delay = neuron.dissolve_delay - Option.get(neuron.dissolve_start, 0)
+                        }
+                    }
+                }
+                //new_neuron := { new_neuron with state = new_state }
             }
         };
         neuron
@@ -484,11 +503,11 @@ shared actor class DAO() = this {
     private func get_voting_power(user : Principal) : async Float {
 
         if (IS_QUADRATIC) {
-            return (Float.sqrt(await verify_balance(user)))
+            return (Float.sqrt(await get_default_ledger_balance(user)))
         };
 
         switch (current_vp_mode) {
-            case (#basic) await verify_balance(user);
+            case (#basic) await get_default_ledger_balance(user);
             case (#advanced) { calculate_user_vp(user) } //CHORE wrap
         }
     };
@@ -523,22 +542,30 @@ shared actor class DAO() = this {
         var age_bonus = AGE_BONUS_START;
         var stake = neuron.stake;
 
-        if (neuron.state == #dissolving) {
-            age_bonus := 1.0
+        let days_since_last_unlock = TU.daysFromEpoch(Time.now() - Option.get(neuron.dissolve_start, neuron.creation_date));
+
+        if (neuron.state != #dissolving) {
+            var capped_days = days_since_last_unlock;
+            if (capped_days > 365 * MAX_AGE_BONUS) {
+                capped_days := 365 * MAX_AGE_BONUS
+            };
+            age_bonus := 0.00584 * Float.fromInt(capped_days)
         };
 
-        //todo time conversion
-        if (TU.daysFromEpoch(neuron.dissolve_delay) < MIN_LOCKUP_MONTHS * 30) {
+        var remaining_days = TU.daysFromEpoch(neuron.dissolve_delay);
+        if (remaining_days < MIN_LOCKUP_MONTHS * 30) {
             return 0
         };
 
-        if (TU.daysFromEpoch(neuron.dissolve_delay) - TU.daysFromEpoch(Option.get(neuron.dissolve_start, 0)) > MIN_LOCKUP_MONTHS * 30) {
-
+        //age 0,00584
+        //2735 days lockup 0.0019535
+        var capped_remaining_days = remaining_days;
+        if (capped_remaining_days > MAX_LOCKUP_MONTHS * 30) {
+            capped_remaining_days := MAX_LOCKUP_MONTHS * 30
         };
+        age_bonus := Float.fromInt(capped_remaining_days) * 0.0019535;
 
         return stake * age_bonus * lockup_bonus
     };
-
-    // modify_parameters
 
 }
