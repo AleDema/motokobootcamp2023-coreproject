@@ -17,12 +17,11 @@ actor Webpage {
     public type HttpRequest = Http.HttpRequest;
     public type HttpResponse = Http.HttpResponse;
     stable var body = "Hello World";
-    // stable var DAO_principal : Principal = Principal.nil;
 
     //must be called on init to work
-    public shared (caller) func update_body(msg : Text) : async () {
-        //add caller check
-        //if DAO_principal empty, call DAO and get his principal
+    public shared ({ caller }) func update_body(msg : Text) : async () {
+        //TODO UPDATE FOR MAINNET
+        if (not Principal.equal(caller, Principal.fromText("fterm-bydaq-aaaaa-aaaaa-c"))) return;
         body := msg;
         update_asset_hash()
     };

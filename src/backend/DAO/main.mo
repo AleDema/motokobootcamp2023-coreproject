@@ -17,13 +17,8 @@ import TU "../utils/time";
 import Map "../utils/Map";
 import ICRCTypes "../ledger/Types";
 import A "../utils/Account";
-// import Webpage "canister:Webpage";
-// import Ledger "canister:ledger";
-// import Map "mo:hashmap/Map";
 
 shared actor class DAO() = this {
-
-    // let canisterPrincipal : Principal = Principal.fromActor(this);
 
     //change on main
     var DEV_MODE = true;
@@ -35,8 +30,9 @@ shared actor class DAO() = this {
     };
     let icrc_canister = actor (icrc_principal) : ICRCTypes.TokenInterface;
 
-    let main_webpage_principal = "db3eq-6iaaa-aaaah-abz6a-cai";
-    let local_webpage_principal = "ai7t5-aibaq-aaaaa-aaaaa-c";
+    //todo swap on main
+    let main_webpage_principal = "hozae-racaq-aaaaa-aaaaa-c";
+    let local_webpage_principal = "hozae-racaq-aaaaa-aaaaa-c";
     var webpage_principal = main_ledger_principal;
     if (DEV_MODE) {
         webpage_principal := local_webpage_principal
@@ -67,7 +63,7 @@ shared actor class DAO() = this {
     stable var MIN_VP_REQUIRED = 1;
     stable var PROPOSAL_VP_THESHOLD = 100;
     stable var IS_QUADRATIC = false;
-    private var current_vp_mode : VotingPowerLogic = #basic;
+    private var current_vp_mode : VotingPowerLogic = #advanced;
     private stable var proposal_id_counter = 0;
     private stable let proposals = Map.new<Nat, Proposal>();
     private stable let user_votes = Map.new<Principal, Map.Map<ProposalId, Vote>>();
@@ -77,6 +73,31 @@ shared actor class DAO() = this {
     public shared ({ caller }) func whoami() : async Principal {
         Debug.print(debug_show (caller));
         return caller
+    };
+
+    type DebugInfo = {
+        my_principal : Principal;
+        min_vp_required : Nat;
+        proposal_vp_threshold : Nat;
+        is_quadratic : Bool;
+        current_vp_mode : VotingPowerLogic;
+        my_vp : Float
+
+    };
+
+    public shared ({ caller }) func get_debug_info() : async DebugInfo {
+        let debug_data = {
+            my_principal = caller;
+            min_vp_required = MIN_VP_REQUIRED;
+            proposal_vp_threshold = PROPOSAL_VP_THESHOLD;
+            is_quadratic = IS_QUADRATIC;
+            current_vp_mode = current_vp_mode;
+            my_vp = await get_voting_power(caller)
+
+        };
+        Debug.print(debug_show (caller));
+        // Debug.print(debug_show (debug_data));
+        return debug_data
     };
 
     public shared (msg) func submit_proposal(title : Text, description : Text, change : ProposalType) : async () {
@@ -113,9 +134,10 @@ shared actor class DAO() = this {
     };
 
     public query func get_all_proposals() : async [Proposal] {
-        //Debug.print(debug_show (Map.toArray(proposals)));
         let iter = Map.vals<Nat, Proposal>(proposals);
-        Iter.toArray(iter)
+        let arr = Iter.toArray(iter);
+        Debug.print(debug_show (arr));
+        arr
     };
 
     public shared ({ caller }) func vote(id : ProposalId, choice : VotingOptions) : async () {
@@ -165,7 +187,8 @@ shared actor class DAO() = this {
             }
         };
 
-        if (hasVoted) return;
+        //TODO ENABLE
+        // if (hasVoted) return;
 
         //if approved or rejected can't vote'
         if (p.state == #approved or p.state == #rejected) return;
@@ -236,9 +259,13 @@ shared actor class DAO() = this {
     };
 
     //TEST
-    public shared func check_deposit(principal : Principal, subaccount : Subaccount) : async Float {
-        normalize_ledger_balance(await icrc_canister.icrc1_balance_of({ owner = principal; subaccount = ?subaccount }))
+    public shared func check_deposit(principal : Principal, subaccount : Subaccount) : async () {
+        let deposit = normalize_ledger_balance(await icrc_canister.icrc1_balance_of({ owner = principal; subaccount = ?subaccount }));
+        if (deposit > 0.0) {
+            ignore Map.put(user_balances, phash, principal, get_user_internal_balance(principal) + deposit)
+        }
     };
+
     //TEST
     public shared ({ caller }) func withdraw(address : Principal, amount : Float) : async () {
         if (A.isAnonymous(caller)) return;
@@ -258,6 +285,14 @@ shared actor class DAO() = this {
 
     public shared ({ caller }) func generate_deposit_address() : async AccountIdentifier {
         A.accountIdentifier(caller, A.defaultSubaccount())
+    };
+
+    type DepositAddressInfo = {
+        principal : Principal;
+        subaccount : Subaccount
+    };
+    public shared ({ caller }) func get_deposit_address_info() : async DepositAddressInfo {
+        return { principal = caller; subaccount = A.defaultSubaccount() }
     };
 
     private func internal_transfer(from : Principal, to : Principal, amount : Float) : () {
@@ -606,8 +641,6 @@ shared actor class DAO() = this {
             return 0
         };
 
-        //age 0,00584
-        //2735 days lockup 0.0019535
         var capped_remaining_days = remaining_days;
         if (capped_remaining_days > MAX_LOCKUP_MONTHS * 30) {
             capped_remaining_days := MAX_LOCKUP_MONTHS * 30

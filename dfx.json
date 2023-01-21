@@ -2,8 +2,7 @@
   "canisters": {
     "DAO": {
       "main": "src/backend/DAO/main.mo",
-      "type": "motoko",
-      "dependencies": []
+      "type": "motoko"
     },
     "Webpage": {
       "main": "src/backend/Webpage/webpage.mo",
@@ -19,17 +18,15 @@
         }
       }
     },
-    "frontend": {
+    "assets": {
       "dependencies": [
-        "DAO",
-        "ledger"
+        "DAO"
       ],
       "frontend": {
         "entrypoint": "src/frontend/src/dist/index.html"
       },
       "source": [
-        "src/frontend/src/dist/",
-        "src/frontend/src/assets/"
+        "src/frontend/src/dist/"
       ],
       "type": "assets"
     }
