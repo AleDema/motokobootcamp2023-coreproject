@@ -1,32 +1,32 @@
 import { idlFactory as idlFactoryDAO } from "@declarations/DAO/DAO.did.js"
+import { idlFactory as idlFactoryLedger } from "@declarations/ledger/ledger.did.js"
 import { HttpAgent, Actor } from "@dfinity/agent"
-
-//TODO : Add your mainnet id whenever you have deployed on the IC
-const daoCanisterId =
-    process.env.NODE_ENV === "development" ? "ai7t5-aibaq-aaaaa-aaaaa-c" : "ai7t5-aibaq-aaaaa-aaaaa-c"
 
 // See https://docs.plugwallet.ooo/ for more informations
 export async function plugConnection() {
-    const result = await window.ic.plug.requestConnect({
-        whitelist: [daoCanisterId],
-    })
-    if (!result) {
-        throw new Error("User denied the connection")
-    }
+
+
+    //TODO : Add your mainnet id whenever you have deployed on the IC
+    const daoCanisterId =
+        process.env.NODE_ENV === "development" ? "fterm-bydaq-aaaaa-aaaaa-c" : "fterm-bydaq-aaaaa-aaaaa-c"
+
+    const ledgerCanisterId =
+        process.env.NODE_ENV === "development" ? "jcuhx-tqeaq-aaaaa-aaaaa-c" : "db3eq-6iaaa-aaaah-abz6a-cai"
+
+
+
     const p = await window.ic.plug.agent.getPrincipal()
 
-    const agent = new HttpAgent({
-        host: process.env.NODE_ENV === "development" ? "http://localhost:8000" : "https://ic0.app",
-    });
-
-    if (process.env.NODE_ENV === "development") {
-        agent.fetchRootKey();
-    }
-
-    const actor = Actor.createActor(idlFactoryDAO, {
-        agent,
+    const actor = await window.ic.plug.createActor({
         canisterId: daoCanisterId,
-    });
+        interfaceFactory: idlFactoryDAO,
+    })
 
-    return { actor: actor, principal: p }
+    const ledger = await window.ic.plug.createActor({
+        canisterId: ledgerCanisterId,
+        interfaceFactory: idlFactoryLedger,
+    })
+
+
+    return { daoActor: actor, principal: p, ledgerActor: ledger }
 }
