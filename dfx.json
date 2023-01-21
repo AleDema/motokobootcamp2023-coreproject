@@ -3,9 +3,7 @@
     "DAO": {
       "main": "src/backend/DAO/main.mo",
       "type": "motoko",
-      "dependencies": [
-        "Webpage"
-      ]
+      "dependencies": []
     },
     "Webpage": {
       "main": "src/backend/Webpage/webpage.mo",
@@ -15,6 +13,7 @@
       "type": "motoko",
       "main": "src/backend/ledger/Canisters/Token.mo",
       "remote": {
+        "candid": "src/backend/ledger/icrc1.did",
         "id": {
           "ic": "db3eq-6iaaa-aaaah-abz6a-cai"
         }
@@ -23,14 +22,14 @@
     "frontend": {
       "dependencies": [
         "DAO",
-        "Webpage"
+        "ledger"
       ],
       "frontend": {
-        "entrypoint": "dist/index.html"
+        "entrypoint": "src/frontend/src/dist/index.html"
       },
       "source": [
-        "dist/",
-        "src/frontend/assets"
+        "src/frontend/src/dist/",
+        "src/frontend/src/assets/"
       ],
       "type": "assets"
     }

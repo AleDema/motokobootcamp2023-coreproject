@@ -6,6 +6,7 @@ import Debug "mo:base/Debug";
 import Trie "mo:base/Trie";
 import Nat "mo:base/Nat";
 import Float "mo:base/Float";
+import Int "mo:base/Int";
 import Hash "mo:base/Hash";
 import Iter "mo:base/Iter";
 import Array "mo:base/Array";
@@ -14,10 +15,38 @@ import G "./GovernanceTypes";
 import N "./neuron";
 import TU "../utils/time";
 import Map "../utils/Map";
-//import Webpage "canister:Webpage";
+import ICRCTypes "../ledger/Types";
+import A "../utils/Account";
+// import Webpage "canister:Webpage";
+// import Ledger "canister:ledger";
 // import Map "mo:hashmap/Map";
 
-actor {
+shared actor class DAO() = this {
+
+    // let canisterPrincipal : Principal = Principal.fromActor(this);
+
+    //change on main
+    var DEV_MODE = true;
+    let main_ledger_principal = "db3eq-6iaaa-aaaah-abz6a-cai";
+    let local_ledger_principal = "ai7t5-aibaq-aaaaa-aaaaa-c";
+    var icrc_principal = main_ledger_principal;
+    if (DEV_MODE) {
+        icrc_principal := local_ledger_principal
+    };
+    let icrc_canister = actor (icrc_principal) : ICRCTypes.TokenInterface;
+
+    let main_webpage_principal = "db3eq-6iaaa-aaaah-abz6a-cai";
+    let local_webpage_principal = "ai7t5-aibaq-aaaaa-aaaaa-c";
+    var webpage_principal = main_ledger_principal;
+    if (DEV_MODE) {
+        webpage_principal := local_webpage_principal
+    };
+
+    public type WebPageType = actor {
+        update_body : shared Text -> async ()
+    };
+
+    let webpage_canister = actor (webpage_principal) : WebPageType;
 
     public type AccountIdentifier = Blob;
     public type Subaccount = Blob;
@@ -35,13 +64,10 @@ actor {
 
     let { ihash; nhash; thash; phash; calcHash } = Map;
 
-    var DEV_MODE = true;
-
     stable var MIN_VP_REQUIRED = 1;
     stable var PROPOSAL_VP_THESHOLD = 100;
     stable var IS_QUADRATIC = false;
     private var current_vp_mode : VotingPowerLogic = #basic;
-
     private stable var proposal_id_counter = 0;
     private stable let proposals = Map.new<Nat, Proposal>();
     private stable let user_votes = Map.new<Principal, Map.Map<ProposalId, Vote>>();
@@ -54,7 +80,9 @@ actor {
     };
 
     public shared (msg) func submit_proposal(title : Text, description : Text, change : ProposalType) : async () {
-        if (verify_balance(msg.caller) < Float.fromInt(MIN_VP_REQUIRED)) return;
+        //check anony principal TODO
+        let vp = await get_voting_power(msg.caller);
+        if (vp < Float.fromInt(MIN_VP_REQUIRED)) return;
 
         //TODO input validation
 
@@ -95,13 +123,13 @@ actor {
         Debug.print(debug_show (id));
         Debug.print(debug_show (choice));
 
-        let user_vp = get_voting_power(caller);
+        let user_vp = await get_voting_power(caller);
         if (user_vp <= Float.fromInt(MIN_VP_REQUIRED)) return;
 
         let p : Proposal = do {
             switch (Map.get(proposals, nhash, id)) {
                 case (?proposal) proposal;
-                case (_) return //does it return null or return the func? TODO TEST
+                case (_) return //does it return null or return the func? seems to work
             }
         };
 
@@ -119,7 +147,7 @@ actor {
             second!
         };
 
-        //TODO TEST
+        // TEST
         switch (test1, test2) {
             case (?exists1, ?exist2) {
                 hasVoted := true
@@ -172,11 +200,10 @@ actor {
     };
 
     private func execute_change(change : ProposalType) : async () {
-        //TODO proposal types
-        //ignore Webpage.update_body(change)
+        //TEST proposal types
         switch (change) {
             case (#change_text(new_text)) {
-                //ignore Webpage.update_body(change)
+                ignore webpage_canister.update_body(new_text)
             };
             case (#update_min_vp(new_vp)) {
                 MIN_VP_REQUIRED := new_vp
@@ -185,47 +212,71 @@ actor {
                 PROPOSAL_VP_THESHOLD := new_th
             };
             case (#toggle_quadratic) {
-                IS_QUADRATIC := not IS_QUADRATIC
+                quadratic_voting()
             };
             case (#create_lottery(amount, price, share_percentage, winning_percentage)) {
-                //todo
+                //BEYOND
             }
         }
     };
 
-    //TODO actually implement this
-    private func verify_balance(user : Principal) : Float {
-        if (DEV_MODE) {
-            return 100
-        } else return 10; //TODO
-
+    private func quadratic_voting() {
+        IS_QUADRATIC := not IS_QUADRATIC
     };
 
-    //todo
-    public shared ({ caller }) func check_deposit(address : Subaccount) : async Float {
-        0.0
-    };
-    //todo
-    public shared ({ caller }) func withdraw(amount : Float, address : Principal) : async () {
-
+    public func verify_balance(user : Principal) : async Float {
+        normalize_ledger_balance(await icrc_canister.icrc1_balance_of({ owner = user; subaccount = null }))
     };
 
-    public shared ({ caller }) func generate_deposit_address() : async () {
-
+    private func normalize_ledger_balance(amount : Nat) : Float {
+        if (amount == 0) return 0.0;
+        return Float.fromInt(amount) / 100000000
     };
 
-    public func internal_transfer(from : Principal, to : Principal, amount : Float) : () {
+    //TEST
+    public shared func check_deposit(principal : Principal, subaccount : Subaccount) : async Float {
+        normalize_ledger_balance(await icrc_canister.icrc1_balance_of({ owner = principal; subaccount = ?subaccount }))
+    };
+    //TEST
+    public shared ({ caller }) func withdraw(address : Principal, amount : Float) : async () {
+        if (has_enough_balance(address, amount)) {
+            ignore Map.put(user_balances, phash, address, get_user_internal_balance(address) - amount);
+            //ledger transfer
+            ignore icrc_canister.icrc1_transfer({
+                to = { owner = address; subaccount = null };
+                fee = null;
+                memo = null;
+                from_subaccount = null;
+                created_at_time = null;
+                amount = Int.abs(Float.toInt(amount * 100000000)) //decimals
+            })
+        }
+    };
 
+    public shared ({ caller }) func generate_deposit_address() : async AccountIdentifier {
+        A.accountIdentifier(caller, A.defaultSubaccount())
+    };
+
+    private func internal_transfer(from : Principal, to : Principal, amount : Float) : () {
+        if (has_enough_balance(from, amount)) {
+            ignore Map.put(user_balances, phash, from, get_user_internal_balance(from) - amount);
+            ignore Map.put(user_balances, phash, to, get_user_internal_balance(to) + amount)
+        }
     };
 
     private func has_enough_balance(user : Principal, amount : Float) : Bool {
+        let balance = get_user_internal_balance(user);
+        if (balance - amount >= 0) { return true } else { return false }
+    };
+
+    private func get_user_internal_balance(user : Principal) : Float {
         let test : ?Float = do ? {
             let balance = Map.get(user_balances, phash, user);
             balance!
         };
         switch (test) {
-            case (?balance) return (balance - amount >= 0);
-            case (_) false
+            case (?balance) return (balance);
+            case (_) 0.0
         }
     };
 
@@ -260,7 +311,8 @@ actor {
             if (not has_enough_balance(caller, stake)) return
         };
 
-        //internal_transfer TODO
+        //internal_transfer
+        internal_transfer(caller, Principal.fromActor(this), stake);
 
         //create neuron Map.new<Principal, (Nat, [Neuron])>()
         let test1 : ?NeuronsContainer = do ? {
@@ -302,15 +354,20 @@ actor {
 
     };
 
-    private func process_neuron_state_change(neuron : Neuron, change : NeuronActions) : Neuron {
+    private func process_neuron_state_change(owner : Principal, neuron : Neuron, change : NeuronActions) : Neuron {
         var new_neuron = neuron;
         switch (change) {
             case (#increase_stake(new_stake)) {
-                //todo check balance and transfer
-                new_neuron := { new_neuron with stake = new_stake }
+                //TEST
+                if (has_enough_balance(owner, new_stake)) {
+                    internal_transfer(owner, Principal.fromActor(this), new_stake);
+                    new_neuron := {
+                        new_neuron with stake = neuron.stake + new_stake
+                    }
+                }
             };
             case (#increase_delay(new_delay)) {
-                //check if dissolving
+                //check if dissolving TODO
                 new_neuron := { new_neuron with dissolve_delay = new_delay }
             };
             case (#change_state(new_state)) {
@@ -321,7 +378,7 @@ actor {
         neuron
     };
 
-    private func can_dissolve(neuron : Neuron) : Bool {
+    private func can_dissolve(owner : Principal, id : Nat) : Bool {
         return true
     };
 
@@ -329,7 +386,7 @@ actor {
         return 0
     };
 
-    //todo change to private
+    //CHORE change to private
     public func set_neuron_state(user : Principal, id : Nat, new_value : NeuronActions) : async Result.Result<Text, Text> {
         let test1 : ?NeuronsContainer = do ? {
             let first = Map.get(neurons, phash, user);
@@ -350,7 +407,7 @@ actor {
                 );
                 switch (neuron) {
                     case (?neuron) {
-                        let new_neuron = process_neuron_state_change(neuron, new_value);
+                        let new_neuron = process_neuron_state_change(user, neuron, new_value);
                         var new_neurons = Array.filter<Neuron>(container.neurons, func(n) { return n.id == neuron.id });
                         new_neurons := Array.append(new_neurons, [new_neuron]);
                         ignore Map.put(neurons, phash, user, { current_neuron_id = container.current_neuron_id; neurons = new_neurons });
@@ -383,13 +440,16 @@ actor {
 
     //check dissolve condition TODO
     public shared ({ caller }) func completely_dissolve_neuron(id : Nat) : async () {
-        var reimburse_amount : Float = delete_neuron(caller, id);
-        //delete neuron
+        if (can_dissolve(caller, id)) {
+            //delete neuron
+            var reimburse_amount : Float = delete_neuron(caller, id);
 
-        //internal_transfer TODO
+            //internal_transfer TEST
+            internal_transfer(Principal.fromActor(this), caller, reimburse_amount)
+        }
     };
 
-    //todo remove public and async
+    //CHORE remove public and async
     func delete_neuron(user : Principal, id : Nat) : Float {
         var reimburse_amount : Float = 0;
         let test1 : ?NeuronsContainer = do ? {
@@ -421,26 +481,16 @@ actor {
         reimburse_amount
     };
 
-    private func get_voting_power(user : Principal) : Float {
-        switch (current_vp_mode) {
-            case (#basic) verify_balance(user);
-            case (#advanced) { calculate_user_vp(user) } //todo wrap
-        }
-    };
-
-    private func get_neurons_vp(user : Principal) : Float {
-        var vp : Float = 0;
-        if (DEV_MODE) {
-            vp := 10
-        } else vp := 10; //TODO
+    private func get_voting_power(user : Principal) : async Float {
 
         if (IS_QUADRATIC) {
-            // var ftval = Float.fromInt(vp);
-            var sqr = Float.sqrt(vp);
-            // let i64_vp = Float.toInt64(sqr)
+            return (Float.sqrt(await verify_balance(user)))
         };
 
-        return vp
+        switch (current_vp_mode) {
+            case (#basic) await verify_balance(user);
+            case (#advanced) { calculate_user_vp(user) } //CHORE wrap
+        }
     };
 
     private func calculate_user_vp(caller : Principal) : Float {
@@ -473,12 +523,6 @@ actor {
         var age_bonus = AGE_BONUS_START;
         var stake = neuron.stake;
 
-        if (IS_QUADRATIC) {
-            // var ftval = Float.fromInt(vp);
-            stake := Float.sqrt(stake);
-            // let i64_vp = Float.toInt64(sqr)
-        };
-
         if (neuron.state == #dissolving) {
             age_bonus := 1.0
         };
@@ -495,9 +539,6 @@ actor {
         return stake * age_bonus * lockup_bonus
     };
 
-    //advanced
-
     // modify_parameters
-    // quadratic_voting
 
 }
