@@ -1,6 +1,6 @@
 # create-ic-app
 
-A template for IC projects, it uses:
+Motoko Bootcamp 2023 core project
 
 - React for DOM manipulation
 - TailwindCSS for styling
@@ -9,27 +9,58 @@ A template for IC projects, it uses:
 - Connect2IC for auth
 - ZhenyaUsenko's stable hashmap
 
-To get started, find and replace "backend" with the name of your project in the files and filenames. Then, run `npm install`, and `npm run dev` to run your app locally.
+☑️ Requirements
+The goal for this edition is to build a DAO (Decentralized Autonomous Organization) with the following requirements:
 
-Welcome to your new backend project and to the internet computer development community. By default, creating a new project adds this README and some template files to your project directory. You can edit these template files to customize your project and to include your own code to speed up the development cycle.
+The DAO is controlling a webpage and is able to modify the text on that page through proposals.
+The DAO can create proposals. Each user is able to vote on proposals if he has at least 1 Motoko Bootcamp (MB)token.
+The voting power of any member is equal to the number of MB they hold (at the moment they cast their vote).
+A proposal will automatically be passed if the cumulated voting power of all members that voted for it is equals or above 100.
+A proposal will automatically be rejected if the cumulated voting power of all members that voted against it is equals or above 100.
+Here is a few functions that you'll need to implement in your canister
 
-To get started, you might want to explore the project directory structure and the default configuration file. Working with this project in your development environment will not affect any production deployment or identity tokens.
+submit_proposal
+get_proposal
+get_all_proposals
+vote
+If you want to graduate with honors you'll have to complete those additional requirements:
 
-To learn more before you start working with backend, see the following documentation available online:
+Users are able to lock their MB tokens to create neurons by specifying an amount and a dissolve delay.
 
-- [Quick Start](https://sdk.dfinity.org/docs/quickstart/quickstart-intro.html)
-- [SDK Developer Tools](https://sdk.dfinity.org/docs/developers-guide/sdk-guide.html)
-- [Motoko Programming Language Guide](https://sdk.dfinity.org/docs/language-guide/motoko.html)
-- [Motoko Language Quick Reference](https://sdk.dfinity.org/docs/language-guide/language-manual.html)
-- [JavaScript API Reference](https://erxue-5aaaa-aaaab-qaagq-cai.raw.ic0.app)
-- [TailwindCSS cheatsheet](https://nerdcave.com/tailwind-cheat-sheet)
+Neurons can be in 3 different states:
 
-If you want to start working on your project right away, you might want to try the following commands:
+Locked: the neuron is locked with a set dissolve delay and the user needs to switch it to dissolving to access their MB.
+Dissolving: the neuron's dissolve delay decreases over time until it reaches 0 and then the neuron is dissolved and the user can access their ICP.
+Dissolved: the neuron's dissolve delay is 0 and the user can access their ICP. The dissolve delay can be increased after the neuron is created but can only be decreased over time while the neuron is in dissolving state. Also, neurons can only vote if their dissolve delay is more than 6 months. Additionally, neurons have an age which represents the time passed since it was created or last stopped dissolving.
+Voting power of a neuron is counted as followed: AMOUNT MB TOKENS * DISSOLVE DELAY BONUS * AGE BONUS where:
 
-```bash
-cd backend/
-dfx help
-dfx config --help
+Dissolve delay bonus: The bonuses scale linearly, from 6 months which grants a 1.06x voting power bonus, to 8 years which grants a 2x voting power bonus
+Age bonus: the maximum bonus is attained for 4 years and grants a 1.25x bonus, multiplicative with any other bonuses. The bonuses for durations between 0 seconds and 4 years scale linearly between.
+Proposals are able to modify the following parameters:
+
+The minimum of MB token necessary to vote (by default - 1).
+The amount of voting power necesary for a proposal to pass (by default - 100).
+An option to enable quadratic voting, which makes voting power equal to the square root of their MB token balance.
+
+The canister is blackholed.
+
+Here is a few functions that you'll need to implement in your canister
+
+submit_proposal
+get_proposal
+get_all_proposals
+vote
+modify_parameters
+quadratic_voting
+createNeuron
+dissolveNeuron 
+To graduate with honors you do not need to implement a follow system between neurons as in the NNS (but of course if you want to do that feel free to do so!)
+
+If you want to graduate among the best students there is no specific requirement that we can give but you will be judged based on the following criteria:
+
+The code is clear and concise.
+The code is safe, secure and doesn't contain any bug.
+Additional functionalities have been implemented beyond the requirements.
 ```
 
 ## Running the project locally
@@ -44,7 +75,7 @@ Alternately, step by step, you can run
 
 ```bash
 dfx start --background --clean
-dfx deploy backend
+dfx deploy
 npm run generate
 vite
 ```
