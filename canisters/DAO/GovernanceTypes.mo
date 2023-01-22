@@ -22,7 +22,8 @@ module GovernanceTypes {
         #update_min_vp : Nat; //just nat
         #update_threshold : Nat; //just nat
         #toggle_quadratic;
-        #create_lottery : (Float, Float, Float, Float) // amount, price per, share %, winning %
+        #toggle_advanced_mode;
+        // #create_lottery : (Float, Float, Float, Float) // amount, price per, share %, winning %
     };
 
     public type ProposalState = {

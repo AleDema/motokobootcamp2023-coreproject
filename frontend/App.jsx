@@ -78,6 +78,8 @@ function App() {
     console.log(await auth_ledger.icrc1_transfer({
       to: { owner: principal, subaccount: [deposit.subaccount] }, fee: [BigInt(1000000)], memo: [], from_subaccount: [], created_at_time: [], amount: BigInt(sendAmount * 100000000)
     }))
+
+    init(wallet?.principal)
   }
 
   const getbalance = async () => {
@@ -114,9 +116,11 @@ function App() {
 
   const create_debug_neuron = async () => {
     auth_dao.create_neuron_debug(10, lockup_years, fake_creation, fake_dissolve)
+    init(wallet?.principal)
   }
   const check_deposit = async () => {
     auth_dao.check_deposit()
+    init(wallet?.principal)
   }
 
   const check_dao_ledger_balance = async () => {
@@ -130,6 +134,7 @@ function App() {
   const withdraw = async () => {
     let res = await auth_dao.withdraw(Principal.fromText(wallet.principal), Number.parseFloat(sendAmount))
     console.log(res)
+    init(wallet?.principal)
   }
 
   const init = async (principal) => {
@@ -215,7 +220,7 @@ function App() {
           <div>
             <button onClick={withdraw}>withdraw to ledger</button>
           </div>
-          <button onClick={create_debug_neuron}>create debug neuron (immediately dissolvable)</button>
+          <button onClick={create_debug_neuron}>create debug neuron (immediately dissolvable, 10 MBT required)</button>
           <div>
             <Link to="/dao">DAO</Link>
             <br></br>
@@ -258,11 +263,11 @@ const client = createClient({
 const router = createBrowserRouter(createRoutesFromElements(
   <Route path="/" element={<RootLayout />} errorElement={<ErrorPage />}>
     <Route index element={<App />} />
-    <Route path="/home" element={<Home />} />
     <Route path="/dao" element={<DaoPage />} />
     <Route path="/neurons" element={<Neurons />} />
-    <Route path="/proposal:id" element={<ProposalPage />} />
-    <Route path="/neuron:id" element={<NeuronPage />} />
+    <Route path="/proposal/:id" element={<ProposalPage />} />
+    <Route path="/neuron/:id" element={<NeuronPage />} />
+    <Route path="/home" element={<Home />} />
   </Route>
 ));
 

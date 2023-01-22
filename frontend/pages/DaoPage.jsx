@@ -8,10 +8,11 @@ import state from "../context/global"
 // import { DAO } from "@declarations/DAO"
 
 const options = [
-    { value: "update_page", label: "update_page" },
-    { value: "update_min_vp", label: "update_min_vp" },
-    { value: "update_thresold", label: "update_thresold" },
-    { value: "toggle_quadratic", label: "toggle_quadratic" }
+    { value: "update_page", label: "Update Page Text" },
+    { value: "update_min_vp", label: "Update Min VP" },
+    { value: "update_thresold", label: "Update Thresold" },
+    { value: "toggle_quadratic", label: "Toggle Quadratic" },
+    { value: "toggle_advanced_mode", label: "Toggle Neuron mode" }
 ];
 
 const DaoPage = () => {
@@ -51,6 +52,10 @@ const DaoPage = () => {
             propVariant = { toggle_quadratic: null }
         }
 
+        if (proposalType === "toggle_advanced_mode") {
+            propVariant = { toggle_advanced_mode: null }
+        }
+
         console.log(propVariant)
 
         auth_dao.submit_proposal(proposalTitle, proposalDescription, propVariant)
@@ -78,7 +83,7 @@ const DaoPage = () => {
             <p>{snap.principal}</p>
             <div className="flex flex-col items-center">
                 {proposals.map(function (e, i) {
-                    return (<Link to={`/proposal${e.id}`} key={e.id}>{e.title + " " + e.id}</Link>)
+                    return (<Link to={`/proposal/${e.id}`} key={e.id}>{e.title + " " + e.id}</Link>)
                 })}
             </div>
             <div className="flex flex-col space-y-4 w-screen items-center">

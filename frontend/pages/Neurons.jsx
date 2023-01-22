@@ -50,17 +50,18 @@ const Neurons = () => {
             <p>{snap.principal}</p>
             <div className="flex flex-col items-center">
                 {neurons.map(function (e, i) {
-                    return (<Link to={`/neuron${e.id}`} key={e.id}>{"Neuron " + e.id}</Link>)
+                    return (<Link to={`/neuron/${e.id}`} key={e.id}>{"Neuron " + e.id}</Link>)
                 })}
             </div>
             <div className="flex flex-col space-y-4 w-screen w-screen items-center">
+                <p>stake</p>
                 <input className="text-black w-5/12 h-44" type="num"
                     placeholder="Stake amount"
                     value={neuronStake}
                     onChange={(e) => setNeuronStake(e.target.value)}>
 
                 </input>
-
+                <p>dissolve delay in days</p>
                 <input className="text-black w-5/12 h-44" type="num"
                     placeholder="delay days"
                     value={neuronDelay}

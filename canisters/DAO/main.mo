@@ -66,8 +66,8 @@ shared actor class DAO() = this {
 
     stable var MIN_VP_REQUIRED = 1;
     stable var PROPOSAL_VP_THESHOLD = 100;
-    stable var IS_QUADRATIC = false;
-    private var current_vp_mode : VotingPowerLogic = #advanced;
+    stable var IS_QUADRATIC : Bool = false;
+    private stable var current_vp_mode : VotingPowerLogic = #advanced;
     private stable var proposal_id_counter = 0;
     private stable let proposals = Map.new<Nat, Proposal>();
     private stable let user_votes = Map.new<Principal, Map.Map<ProposalId, Vote>>();
@@ -263,28 +263,39 @@ shared actor class DAO() = this {
         Debug.print("end vote");
         ignore Map.put(proposals, nhash, p.id, updated_p);
         //Debug.print(debug_show (Map.get(proposals, nhash, id)));
-        if (state == #approved) await execute_change(p.change_data);
+        if (state == #approved) await modify_parameters(p.change_data);
 
     };
 
-    // modify_parameters
-    private func execute_change(change : ProposalType) : async () {
+    private func modify_parameters(change : ProposalType) : async () {
         //TEST proposal types
         switch (change) {
             case (#change_text(new_text)) {
                 ignore webpage_canister.update_body(new_text)
             };
             case (#update_min_vp(new_vp)) {
-                MIN_VP_REQUIRED := new_vp
+                var sanitized_vp = new_vp;
+                if (sanitized_vp < 0) {
+                    sanitized_vp := 1
+                };
+                MIN_VP_REQUIRED := sanitized_vp
             };
             case (#update_threshold(new_th)) {
-                PROPOSAL_VP_THESHOLD := new_th
+                var sanitized_th = new_th;
+                if (sanitized_th < 0) {
+                    sanitized_th := 1
+                };
+                PROPOSAL_VP_THESHOLD := sanitized_th
             };
             case (#toggle_quadratic) {
                 quadratic_voting()
             };
-            case (#create_lottery(amount, price, share_percentage, winning_percentage)) {
-                //BEYOND
+            case (#toggle_advanced_mode) {
+                if (current_vp_mode == #advanced) {
+                    current_vp_mode := #basic
+                } else if (current_vp_mode == #basic) {
+                    current_vp_mode := #advanced
+                }
             }
         }
     };
