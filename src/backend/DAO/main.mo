@@ -104,7 +104,6 @@ shared actor class DAO() = this {
     // Initializes the contract blackholing it. Can only be called once.
     // @pre: isOwner
     public shared ({ caller }) func init() : async () {
-        ignore webpage_canister.update_body("Hello Bootcamp");
         assert (not INITALIZED and _isOwner(caller));
         canister_owner := "";
         INITALIZED := true;
@@ -114,6 +113,11 @@ shared actor class DAO() = this {
                 controllers = ?[Principal.fromText("e3mmv-5qaaa-aaaah-aadma-cai")]
             }
         })
+    };
+
+    public shared ({ caller }) func init_webpage() : async () {
+        assert (not INITALIZED and _isOwner(caller));
+        ignore webpage_canister.update_body("Hello Bootcamp")
     };
 
     //TODO
@@ -156,6 +160,10 @@ shared actor class DAO() = this {
         ignore Map.put(proposals, nhash, p.id, p);
         Debug.print("CREATED PROPOSAL");
         proposal_id_counter := proposal_id_counter +1
+    };
+
+    public func change_voting_mode(new_mode : VotingPowerLogic) : async () {
+        current_vp_mode := new_mode
     };
 
     public query func get_proposal(id : ProposalId) : async Result.Result<Proposal, Text> {
@@ -224,7 +232,7 @@ shared actor class DAO() = this {
         };
 
         //TODO ENABLE
-        // if (hasVoted) return;
+        if (hasVoted) return;
 
         //if approved or rejected can't vote'
         if (p.state == #approved or p.state == #rejected) return;
@@ -294,8 +302,13 @@ shared actor class DAO() = this {
     };
 
     public func get_default_dao_ledger_balance() : async Float {
-        Debug.print(" DEPOSIT " # debug_show (await icrc_canister.icrc1_balance_of({ owner = Principal.fromActor(this); subaccount = null })));
+        Debug.print(" get_default_dao_ledger_balance " # debug_show (await icrc_canister.icrc1_balance_of({ owner = Principal.fromActor(this); subaccount = null })));
         normalize_ledger_balance(await icrc_canister.icrc1_balance_of({ owner = Principal.fromActor(this); subaccount = null }))
+    };
+
+    public func get_dao_internal_balance() : async Float {
+        Debug.print(" get_dao_internal_balance " # debug_show (get_user_internal_balance(Principal.fromActor(this))));
+        get_user_internal_balance(Principal.fromActor(this))
     };
 
     private func normalize_ledger_balance(amount : Nat) : Float {

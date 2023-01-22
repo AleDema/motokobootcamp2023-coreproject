@@ -128,7 +128,7 @@ function App() {
 
 
   const check_dao_internal_balance = async () => {
-    auth_dao.get_default_dao_ledger_balance()
+    auth_dao.get_dao_internal_balance()
   }
 
   const initDeposit = async () => {
