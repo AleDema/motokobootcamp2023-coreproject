@@ -681,6 +681,7 @@ shared actor class DAO() = this {
             case (#ok(true)) {
                 //delete neuron
                 var reimburse_amount : Float = delete_neuron(caller, id);
+                Debug.print("reimburse_amount: " # debug_show (reimburse_amount));
 
                 //internal_transfer TEST
                 internal_transfer(Principal.fromActor(this), caller, reimburse_amount);

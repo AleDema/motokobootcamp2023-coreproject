@@ -145,10 +145,9 @@ function App() {
       // console.log(Principal.fromUint8Array(address.principal))
       // console.log(accountIdentifierFromBytes(address.accountid))
       console.log(await auth_dao.get_debug_info())
-      console.log("CONNECTED")
-      console.log(isConnected)
+      console.log("CONNECTED: " + isConnected)
       let address = await auth_dao.get_deposit_address_info();
-      console.log(address)
+      // console.log(address)
       setDeposit(address)
     } else {
       setDeposit(null);
