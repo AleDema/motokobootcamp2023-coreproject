@@ -6,7 +6,7 @@ import { useParams } from "react-router-dom";
 import { useCanister } from "@connect2ic/react"
 
 //CANISTER
-import { DAO } from "@declarations/DAO"
+// import { DAO } from "@declarations/DAO"
 
 const VotingOptions = {
     approve: null,

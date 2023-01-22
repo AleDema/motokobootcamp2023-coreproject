@@ -1,5 +1,5 @@
 import React from 'react'
-import AuthButton from "@components/AuthButton"
+import AuthButton from "../components/AuthButton"
 import { ConnectDialog } from "@connect2ic/react"
 import { Outlet } from "react-router-dom";
 

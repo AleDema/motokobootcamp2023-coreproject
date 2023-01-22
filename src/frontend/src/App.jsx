@@ -2,6 +2,14 @@ import React, { useEffect, useState } from "react"
 import logo from "./assets/dfinity.svg"
 import { Principal } from '@dfinity/principal';
 import { AccountIdentifier } from "@dfinity/nns";
+
+//ROUTING
+import { createRoutesFromElements, Link } from "react-router-dom";
+import {
+  createBrowserRouter,
+  RouterProvider,
+  Route
+} from "react-router-dom";
 /*
  * Connect2ic provides essential utilities for IC app development
  */
@@ -10,6 +18,8 @@ import { defaultProviders } from "@connect2ic/core/providers"
 import { Connect2ICProvider, useConnect } from "@connect2ic/react"
 import { useBalance, useWallet } from "@connect2ic/react"
 import "@connect2ic/core/style.css"
+import { useCanister } from "@connect2ic/react"
+import { PlugWallet } from "@connect2ic/core/providers/plug-wallet"
 /*
  * Import canister definitions like this:
  */
@@ -17,17 +27,16 @@ import "@connect2ic/core/style.css"
 /*
  * Some examples to get you started
  */
-import { Transfer } from "@components/Transfer"
-import { Profile } from "@components/Profile"
+// import { Transfer } from "@components/Transfer"
+// import { Profile } from "@components/Profile"
 
-import Home from '@pages/Home';
-import DaoPage from '@pages/DaoPage';
-import NeuronPage from '@pages/NeuronPage';
-import Neurons from '@pages/Neurons';
-import ErrorPage from '@pages/ErrorPage';
-import RootLayout from '@layouts/RootLayout';
-import { useCanister } from "@connect2ic/react"
-import { PlugWallet } from "@connect2ic/core/providers/plug-wallet"
+import Home from './pages/Home';
+import DaoPage from './pages/DaoPage';
+import NeuronPage from './pages/NeuronPage';
+import Neurons from './pages/Neurons';
+import ErrorPage from './pages/ErrorPage';
+import ProposalPage from "./pages/ProposalPage"
+import RootLayout from './layouts/RootLayout';
 
 //STATE
 import { useSnapshot } from 'valtio'
@@ -39,15 +48,6 @@ import * as DAO from "../../../.dfx/local/canisters/DAO"
 import * as ledger from "../../../.dfx/local/canisters/ledger"
 
 import { accountIdentifierFromBytes, principalToAccountDefaultIdentifier, principalToSubAccount } from "./helpers"
-
-//ROUTING
-import { createRoutesFromElements, Link } from "react-router-dom";
-import {
-  createBrowserRouter,
-  RouterProvider,
-  Route
-} from "react-router-dom";
-import ProposalPage from "@pages/ProposalPage"
 
 function App() {
 
