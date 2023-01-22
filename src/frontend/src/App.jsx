@@ -22,6 +22,8 @@ import { Profile } from "@components/Profile"
 
 import Home from '@pages/Home';
 import DaoPage from '@pages/DaoPage';
+import NeuronPage from '@pages/NeuronPage';
+import Neurons from '@pages/Neurons';
 import ErrorPage from '@pages/ErrorPage';
 import RootLayout from '@layouts/RootLayout';
 import { useCanister } from "@connect2ic/react"
@@ -51,31 +53,33 @@ function App() {
 
   const snap = useSnapshot(state)
 
-  const [deposit, setDeposit] = useState("")
+  const [deposit, setDeposit] = useState({})
   const { isConnected, disconnect, activeProvider } = useConnect();
   const [auth_dao, { loading, error }] = useCanister("DAO")
   const [auth_ledger] = useCanister("ledger")
   const [wallet] = useWallet()
 
-  const to32bits = (num: any) => {
+  const to32bits = (num) => {
     let b = new ArrayBuffer(4);
     new DataView(b).setUint32(0, num);
     return Array.from(new Uint8Array(b));
   }
 
   const whoami = async () => {
-    console.log(auth_dao)
+    //console.log(auth_dao)
     auth_dao.whoami()
     //console.log(await auth_dao.whoami())
   }
 
   const dotransfer = async () => {
-    console.log(wallet.principal)
-    let principal = Principal.fromText("jsznl-dkl5x-uqwae-2imi4-l6yvy-ya4ov-6fkgj-5eo33-3f7sc-hfg6t-3qe")
+    //console.log(wallet.principal)
+    //let principal = Principal.fromText("jsznl-dkl5x-uqwae-2imi4-l6yvy-ya4ov-6fkgj-5eo33-3f7sc-hfg6t-3qe")
+    let principal = Principal.fromUint8Array(deposit.principal)
     console.log(await auth_ledger.icrc1_transfer({
       to: { owner: principal, subaccount: [] }, fee: [1000000n], memo: [], from_subaccount: [], created_at_time: [], amount: 1000n
     }))
   }
+
 
   const dotransferaccount = async () => {
     console.log(wallet.principal)
@@ -97,8 +101,17 @@ function App() {
     let principal = Principal.fromText("jsznl-dkl5x-uqwae-2imi4-l6yvy-ya4ov-6fkgj-5eo33-3f7sc-hfg6t-3qe")
     console.log(principal)
     console.log(await auth_ledger.icrc1_balance_of({
-      owner: principal, subaccount: [to32bits(1)]
+      owner: deposit.principal, subaccount: deposit.subaccount
     }))
+  }
+
+  //add_balance_debug
+  const addinternalbalance = async () => {
+    auth_dao.add_balance_debug(10000)
+  }
+
+  const createneuron = async () => {
+    auth_dao.create_neuron(10, 365 * 8)
   }
 
   const initDeposit = async () => {
@@ -107,11 +120,15 @@ function App() {
       console.log(await auth_dao.get_debug_info())
       console.log("CONNECTED")
       console.log(isConnected)
-      let address = await auth_dao.generate_deposit_address();
+      let address = await auth_dao.get_deposit_address_info();
       // console.log(accountIdentifierFromBytes(address))
       // console.log(principalToAccountDefaultIdentifier(Principal.fromText(wallet.principal)));
       // console.log(principalToSubAccount(Principal.fromText(wallet.principal)));
-      setDeposit(accountIdentifierFromBytes(address))
+      //setDeposit(accountIdentifierFromBytes(address))
+      console.log(address)
+      console.log(Principal.fromUint8Array(address.principal))
+      console.log(accountIdentifierFromBytes(address.accountid))
+      setDeposit(address)
     } else {
       setDeposit(null);
     }
@@ -138,11 +155,14 @@ function App() {
       <button onClick={dotransferaccount}>tranfer acc</button>
       <button onClick={getbalance}>get balance</button>
       <button onClick={getbalanceacc}>get balance acc</button>
+      <button onClick={addinternalbalance}>addinternalbalance</button>
+      <button onClick={createneuron}>create neuron</button>
       <div>
         {/* <Profile /> */}
-        <p>{deposit}</p>
+        <p>{deposit?.accountid}</p>
         <Link to="/dao">dApp</Link>
         {isConnected ? <Link to="/dao">DAO</Link> : null}
+        {isConnected ? <Link to="/neurons">Neurons</Link> : null}
       </div>
     </>
 
@@ -152,7 +172,8 @@ function App() {
 
 const client = createClient({
   canisters: {
-    DAO
+    DAO,
+    ledger
   },
   providers: [
     new PlugWallet(),
@@ -168,7 +189,9 @@ const router = createBrowserRouter(createRoutesFromElements(
     <Route index element={<App />} />
     <Route path="/home" element={<Home />} />
     <Route path="/dao" element={<DaoPage />} />
+    <Route path="/neurons" element={<Neurons />} />
     <Route path="/proposal:id" element={<ProposalPage />} />
+    <Route path="/neuron:id" element={<NeuronPage />} />
   </Route>
 ));
 

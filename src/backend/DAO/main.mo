@@ -309,10 +309,12 @@ shared actor class DAO() = this {
         }
     };
 
+    //WARNING can cause issues with withdrawals
     public func add_balance_debug_to_principal(to : Principal, amount : Float) : async () {
         ignore Map.put(user_balances, phash, to, get_user_internal_balance(to) + amount)
     };
 
+    //WARNING can cause issues with withdrawals
     public shared ({ caller }) func add_balance_debug(amount : Float) : async () {
         await add_balance_debug_to_principal(caller, amount)
     };
@@ -333,6 +335,8 @@ shared actor class DAO() = this {
         }
     };
 
+    //NEURONS START
+
     public func get_neurons() : async [NeuronsContainer] {
         let iter = Map.vals<Principal, NeuronsContainer>(neurons);
         Iter.toArray(iter)
@@ -340,6 +344,36 @@ shared actor class DAO() = this {
 
     public shared ({ caller }) func get_user_neurons() : async Result.Result<NeuronsContainer, Text> {
         get_user_neurons_internal(caller)
+    };
+
+    public shared ({ caller }) func get_user_neuron(id : Nat) : async Result.Result<Neuron, Text> {
+        let neurons = get_user_neurons_internal(caller);
+        switch (neurons) {
+            case (#ok(container)) {
+                let test = Array.find<Neuron>(
+                    container.neurons,
+                    func(n) {
+                        if (n.id == id) {
+                            return true
+                        } else {
+                            return false
+                        }
+                    },
+                );
+
+                switch (test) {
+                    case (?found) {
+                        return #ok(found)
+                    };
+                    case (_) {
+                        return #err("no neuron with this id")
+                    }
+                }
+            };
+            case (_) {
+                #err("no neurons")
+            }
+        }
     };
 
     private func get_user_neurons_internal(caller : Principal) : Result.Result<NeuronsContainer, Text> {
@@ -358,9 +392,11 @@ shared actor class DAO() = this {
         }
     };
 
-    public shared ({ caller }) func create_neuron(stake : Float, dissolve_delay : Nat) : async () {
+    public shared ({ caller }) func create_neuron(stake : Float, dissolve_delay : Nat) : async Result.Result<Text, Text> {
+
+        if (stake <= 0) return #err("invalid amount");
         //has_enough_balance
-        if (not has_enough_balance(caller, stake)) return
+        if (not has_enough_balance(caller, stake)) return #err("no balance");
 
         //internal_transfer
         internal_transfer(caller, Principal.fromActor(this), stake);
@@ -401,7 +437,8 @@ shared actor class DAO() = this {
             neurons = neurons_temp
         };
 
-        ignore Map.put(neurons, phash, caller, neurons_container)
+        ignore Map.put(neurons, phash, caller, neurons_container);
+        #ok("Neuron created")
 
     };
 
@@ -423,13 +460,13 @@ shared actor class DAO() = this {
                 if (new_delay < neuron.dissolve_delay) delay := neuron.dissolve_delay;
 
                 if (neuron.state == #locked) {
+                    Debug.print("increase dissolve_delay");
                     new_neuron := {
                         new_neuron with dissolve_delay = delay
                     }
                 }
             };
             case (#change_state(new_state)) {
-                // check if can be dissolved
                 switch (new_state) {
                     case (#dissolving) {
                         new_neuron := {
@@ -438,16 +475,93 @@ shared actor class DAO() = this {
                         }
                     };
                     case (#locked) {
+                        Debug.print("new dissolve_delay");
+                        Debug.print(debug_show (neuron.dissolve_delay - TU.daysFromEpoch(Time.now() - Option.get(neuron.dissolve_start, 0))));
                         new_neuron := {
                             new_neuron with state = new_state;
-                            dissolve_delay = neuron.dissolve_delay - TU.daysFromEpoch(Option.get(neuron.dissolve_start, 0))
+                            dissolve_delay = neuron.dissolve_delay - TU.daysFromEpoch(Time.now() - Option.get(neuron.dissolve_start, 0))
                         }
                     }
                 }
                 //new_neuron := { new_neuron with state = new_state }
             }
         };
-        neuron
+        new_neuron
+    };
+
+    //CHORE change to private
+    public func set_neuron_state(user : Principal, id : Nat, new_value : NeuronActions) : async Result.Result<Text, Text> {
+        let test1 : ?NeuronsContainer = do ? {
+            let first = Map.get(neurons, phash, user);
+            first!
+        };
+
+        switch (test1) {
+            case (?container) {
+                let neuron : ?Neuron = Array.find<Neuron>(
+                    container.neurons,
+                    func(n) {
+                        if (n.id == id) {
+                            return true
+                        } else {
+                            return false
+                        }
+                    },
+                );
+                switch (neuron) {
+                    case (?neuron) {
+                        let new_neuron = process_neuron_state_change(user, neuron, new_value);
+                        var new_neurons = Array.filter<Neuron>(container.neurons, func(n) { return n.id != neuron.id });
+                        new_neurons := Array.append(new_neurons, [new_neuron]);
+                        ignore Map.put(neurons, phash, user, { current_neuron_id = container.current_neuron_id; neurons = new_neurons });
+                        #ok("done")
+                    };
+                    case (_) {
+                        #err("neuron not found")
+                    }
+                }
+
+            };
+            case (_) {
+                return #err("Dont have neurons")
+            }
+        }
+
+    };
+
+    public shared ({ caller }) func dissolve_neuron(id : Nat) : async () {
+        ignore set_neuron_state(caller, id, #change_state(#dissolving))
+    };
+
+    public shared ({ caller }) func stop_dissolve_neuron(id : Nat) : async () {
+        ignore set_neuron_state(caller, id, #change_state(#locked))
+    };
+
+    public shared ({ caller }) func set_neuron_lockup(id : Nat, dissolve_delay : Nat) : async () {
+        ignore set_neuron_state(caller, id, #increase_delay(dissolve_delay))
+    };
+
+    public shared ({ caller }) func increase_neuron_stake(id : Nat, new_stake : Float) : async () {
+        ignore set_neuron_state(caller, id, #increase_stake(new_stake))
+    };
+
+    //check dissolve condition TEST
+    public shared ({ caller }) func completely_dissolve_neuron(id : Nat) : async Result.Result<Bool, Text> {
+
+        switch (can_dissolve(caller, id)) {
+            case (#ok(true)) {
+                //delete neuron
+                var reimburse_amount : Float = delete_neuron(caller, id);
+
+                //internal_transfer TEST
+                internal_transfer(Principal.fromActor(this), caller, reimburse_amount);
+                return #ok(true)
+            };
+            case (#ok(false)) { return #ok(false) };
+            case (#err(msg)) {
+                return #err(msg)
+            }
+        }
     };
 
     private func can_dissolve(owner : Principal, id : Nat) : Result.Result<Bool, Text> {
@@ -488,77 +602,6 @@ shared actor class DAO() = this {
             };
             case (_) {
                 return #err("Dont have neurons")
-            }
-        }
-    };
-
-    //CHORE change to private
-    public func set_neuron_state(user : Principal, id : Nat, new_value : NeuronActions) : async Result.Result<Text, Text> {
-        let test1 : ?NeuronsContainer = do ? {
-            let first = Map.get(neurons, phash, user);
-            first!
-        };
-
-        switch (test1) {
-            case (?container) {
-                let neuron : ?Neuron = Array.find<Neuron>(
-                    container.neurons,
-                    func(n) {
-                        if (n.id == id) {
-                            return true
-                        } else {
-                            return false
-                        }
-                    },
-                );
-                switch (neuron) {
-                    case (?neuron) {
-                        let new_neuron = process_neuron_state_change(user, neuron, new_value);
-                        var new_neurons = Array.filter<Neuron>(container.neurons, func(n) { return n.id == neuron.id });
-                        new_neurons := Array.append(new_neurons, [new_neuron]);
-                        ignore Map.put(neurons, phash, user, { current_neuron_id = container.current_neuron_id; neurons = new_neurons });
-                        #ok("done")
-                    };
-                    case (_) {
-                        #err("neuron not found")
-                    }
-                }
-
-            };
-            case (_) {
-                return #err("Dont have neurons")
-            }
-        }
-
-    };
-
-    public shared ({ caller }) func dissolve_neuron(id : Nat) : async () {
-        ignore set_neuron_state(caller, id, #change_state(#dissolving))
-    };
-
-    public shared ({ caller }) func stop_dissolve_neuron(id : Nat) : async () {
-        ignore set_neuron_state(caller, id, #change_state(#locked))
-    };
-
-    public shared ({ caller }) func set_neuron_lockup(id : Nat, dissolve_delay : Nat) : async () {
-        ignore set_neuron_state(caller, id, #increase_delay(dissolve_delay))
-    };
-
-    //check dissolve condition TEST
-    public shared ({ caller }) func completely_dissolve_neuron(id : Nat) : async Result.Result<Bool, Text> {
-
-        switch (can_dissolve(caller, id)) {
-            case (#ok(true)) {
-                //delete neuron
-                var reimburse_amount : Float = delete_neuron(caller, id);
-
-                //internal_transfer TEST
-                internal_transfer(Principal.fromActor(this), caller, reimburse_amount);
-                return #ok(true)
-            };
-            case (#ok(false)) { return #ok(false) };
-            case (#err(msg)) {
-                return #err(msg)
             }
         }
     };
