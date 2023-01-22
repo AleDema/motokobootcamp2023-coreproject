@@ -317,29 +317,36 @@ shared actor class DAO() = this {
     };
 
     //TEST
-    public shared func check_deposit(principal : Principal, subaccount : Subaccount) : async () {
-        let deposit = normalize_ledger_balance(await icrc_canister.icrc1_balance_of({ owner = Principal.fromActor(this); subaccount = ?A.principalToSubaccount(principal) }));
+    public shared ({ caller }) func check_deposit() : async () {
+        let deposit = await icrc_canister.icrc1_balance_of({
+            owner = Principal.fromActor(this);
+            subaccount = ?A.principalToSubaccount(caller)
+        });
+
+        let normal_deposit = normalize_ledger_balance(deposit);
         Debug.print(" DEPOSIT " # debug_show (deposit));
-        Debug.print(" DEPOSIT " # debug_show (await icrc_canister.icrc1_balance_of({ owner = Principal.fromActor(this); subaccount = ?A.principalToSubaccount(principal) })));
-        if (deposit > 0.0) {
-            ignore icrc_canister.icrc1_transfer({
+        Debug.print(" normal_deposit " # debug_show (normal_deposit));
+
+        if (deposit > 0) {
+            let res = await icrc_canister.icrc1_transfer({
                 to = { owner = Principal.fromActor(this); subaccount = null };
                 fee = ?1000000;
                 memo = null;
-                from_subaccount = ?A.principalToSubaccount(principal);
+                from_subaccount = ?A.principalToSubaccount(caller);
                 created_at_time = null;
-                amount = Int.abs(Float.toInt(deposit * 100000000)) //decimals
+                amount = deposit //decimals
             });
-            ignore Map.put(user_balances, phash, principal, get_user_internal_balance(principal) + deposit);
-            Debug.print("SUCCESS DEPOSIT " # debug_show (get_user_internal_balance(principal)))
+            Debug.print("ledger response " # debug_show (res));
+            ignore Map.put(user_balances, phash, caller, get_user_internal_balance(Principal.fromActor(this)) + normal_deposit);
+            Debug.print("SUCCESS DEPOSIT " # debug_show (get_user_internal_balance(caller)))
         }
     };
 
     //TEST
-    public shared ({ caller }) func withdraw(address : Principal, amount : Float) : async () {
-        if (A.isAnonymous(caller)) return;
-        if (has_enough_balance(address, amount)) {
-            ignore Map.put(user_balances, phash, address, get_user_internal_balance(address) - amount);
+    public shared ({ caller }) func withdraw(address : Principal, amount : Float) : async Result.Result<Text, Text> {
+        if (A.isAnonymous(caller)) return #err("anonymous not allowed");
+        if (has_enough_balance(caller, amount)) {
+            ignore Map.put(user_balances, phash, caller, get_user_internal_balance(address) - amount);
             //ledger transfer
             ignore icrc_canister.icrc1_transfer({
                 to = { owner = address; subaccount = null };
@@ -348,8 +355,10 @@ shared actor class DAO() = this {
                 from_subaccount = null;
                 created_at_time = null;
                 amount = Int.abs(Float.toInt(amount * 100000000)) //decimals
-            })
-        }
+            });
+            return #ok("withdraal success")
+        };
+        #err("no balance")
     };
 
     private func generate_deposit_address(owner : Principal) : AccountIdentifier {

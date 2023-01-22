@@ -40,7 +40,7 @@ import RootLayout from './layouts/RootLayout';
 
 //STATE
 import { useSnapshot } from 'valtio'
-import state from "@context/global"
+import state from "./context/global"
 
 // //CANISTER
 // import { DAO } from "@declarations/DAO"
@@ -76,7 +76,7 @@ function App() {
     //let principal = Principal.fromText("jsznl-dkl5x-uqwae-2imi4-l6yvy-ya4ov-6fkgj-5eo33-3f7sc-hfg6t-3qe")
     let principal = deposit.principal
     console.log(await auth_ledger.icrc1_transfer({
-      to: { owner: principal, subaccount: [] }, fee: [1000000n], memo: [], from_subaccount: [], created_at_time: [], amount: 1000n
+      to: { owner: principal, subaccount: [] }, fee: [BigInt(1000000)], memo: [], from_subaccount: [], created_at_time: [], amount: BigInt(10000000000)
     }))
   }
 
@@ -85,7 +85,7 @@ function App() {
     console.log(wallet.principal)
     let principal = deposit.principal
     console.log(await auth_ledger.icrc1_transfer({
-      to: { owner: principal, subaccount: [deposit.subaccount] }, fee: [1000000n], memo: [], from_subaccount: [], created_at_time: [], amount: 1000n
+      to: { owner: principal, subaccount: [deposit.subaccount] }, fee: [BigInt(1000000)], memo: [], from_subaccount: [], created_at_time: [], amount: BigInt(10000000000)
     }))
   }
 
@@ -95,7 +95,7 @@ function App() {
       owner: Principal.fromText(wallet.principal), subaccount: []
     }))
   }
-
+  //99999989970983000n initial user ledger balance
 
   const getbalanceacc = async () => {
     // let principal = Principal.fromText("jsznl-dkl5x-uqwae-2imi4-l6yvy-ya4ov-6fkgj-5eo33-3f7sc-hfg6t-3qe")
@@ -119,32 +119,35 @@ function App() {
     auth_dao.create_neuron_debug(10, lockup_years, fake_creation, fake_dissolve)
   }
   const check_deposit = async () => {
-    auth_dao.check_deposit(deposit.principal, deposit.subaccount)
+    auth_dao.check_deposit()
   }
 
   const check_dao_ledger_balance = async () => {
     auth_dao.get_default_dao_ledger_balance()
   }
 
-
   const check_dao_internal_balance = async () => {
     auth_dao.get_dao_internal_balance()
+  }
+
+  const withdraw = async () => {
+    auth_dao.withdraw(Principal.fromText(wallet.principal), Number.parseFloat(1))
   }
 
   const initDeposit = async () => {
     if (isConnected) {
 
-      console.log(await auth_dao.get_debug_info())
-      console.log("CONNECTED")
-      console.log(isConnected)
-      let address = await auth_dao.get_deposit_address_info();
       // console.log(accountIdentifierFromBytes(address))
       // console.log(principalToAccountDefaultIdentifier(Principal.fromText(wallet.principal)));
       // console.log(principalToSubAccount(Principal.fromText(wallet.principal)));
       //setDeposit(accountIdentifierFromBytes(address))
-      console.log(address)
       // console.log(Principal.fromUint8Array(address.principal))
       // console.log(accountIdentifierFromBytes(address.accountid))
+      console.log(await auth_dao.get_debug_info())
+      console.log("CONNECTED")
+      console.log(isConnected)
+      let address = await auth_dao.get_deposit_address_info();
+      console.log(address)
       setDeposit(address)
     } else {
       setDeposit(null);
@@ -168,15 +171,16 @@ function App() {
       <h1 className="text-5xl">Bootcamp DAO</h1>
       <div className="space-x-4">
       </div>
-      <button onClick={whoami}>get id</button>
-      <button onClick={dotransfer}>tranfer</button>
+      {/* <button onClick={whoami}>get id</button> */}
+      {/* <button onClick={dotransfer}>tranfer</button> */}
       <button onClick={dotransferaccount}>tranfer to deposit addr</button>
       <button onClick={getbalance}>get user balance</button>
       <button onClick={getbalanceacc}>get deposit acc balance</button>
       <button onClick={addinternalbalance}>addinternalbalance</button>
       <button onClick={check_deposit}>check deposit</button>
       <button onClick={check_dao_ledger_balance}>check canister ledger balance</button>
-      <button onClick={check_deposit}>check canister internal balance</button>
+      <button onClick={check_dao_internal_balance}>check canister internal balance</button>
+      <button onClick={withdraw}>withdraw to ledger</button>
       <button onClick={create_debug_neuron}>create debug neuron</button>
       <div>
         {/* <Profile /> */}
