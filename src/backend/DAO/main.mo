@@ -20,21 +20,23 @@ import A "../utils/Account";
 
 shared actor class DAO() = this {
 
+    //TODO MAINNET CHECK WEBPAGE AND LEDGER CANISTER ID
     //change on main
+    let IS_LOCAL_ENV = true;
     var DEV_MODE = true;
     let main_ledger_principal = "db3eq-6iaaa-aaaah-abz6a-cai";
     let local_ledger_principal = "ai7t5-aibaq-aaaaa-aaaaa-c";
     var icrc_principal = main_ledger_principal;
-    if (DEV_MODE) {
+    if (IS_LOCAL_ENV) {
         icrc_principal := local_ledger_principal
     };
     let icrc_canister = actor (icrc_principal) : ICRCTypes.TokenInterface;
 
     //todo swap on main
-    let main_webpage_principal = "hozae-racaq-aaaaa-aaaaa-c";
+    let main_webpage_principal = "tpyud-myaaa-aaaap-qa4gq-cai";
     let local_webpage_principal = "hozae-racaq-aaaaa-aaaaa-c";
     var webpage_principal = main_ledger_principal;
-    if (DEV_MODE) {
+    if (IS_LOCAL_ENV) {
         webpage_principal := local_webpage_principal
     };
 

@@ -153,6 +153,7 @@ function App() {
 
   }, [])
 
+  //TODO MAINNET CHECK WEBPAGE CANISTER ID
   return (
     <>
       <div>
@@ -171,7 +172,7 @@ function App() {
       <div>
         {/* <Profile /> */}
         <p>{deposit?.accountid}</p>
-        <Link to="/dao">dApp</Link>
+        <a href="https://tpyud-myaaa-aaaap-qa4gq-cai.ic0.app/">Webpage </a>
         {isConnected ? <Link to="/dao">DAO</Link> : null}
         {isConnected ? <Link to="/neurons">Neurons</Link> : null}
       </div>
