@@ -12,18 +12,19 @@ module TimeUtils {
     public func secsToNanos(s : Int) : Int { 1_000_000_000 * s };
 
     public func daysFromEpoch(timestamp : Time.Time) : Int {
+        if (timestamp < 1) return 0;
         var to_seconds = timestamp / 1_000_000_000;
         var daysPassed = to_seconds / 60 / 60 / 24;
-        Debug.print(debug_show (timestamp));
-        Debug.print(debug_show (daysPassed));
+        // Debug.print(debug_show (timestamp));
+        // Debug.print(debug_show (daysPassed));
         return daysPassed
     };
 
     public func hoursFromEpoch(timestamp : Time.Time) : Int {
         if (timestamp < 1) return 0;
         var hoursPassed = timestamp / 60 / 60 / 1_000_000_000;
-        Debug.print(debug_show (timestamp));
-        Debug.print(debug_show (hoursPassed));
+        // Debug.print(debug_show (timestamp));
+        // Debug.print(debug_show (hoursPassed));
         return hoursPassed
     };
 

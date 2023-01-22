@@ -419,9 +419,12 @@ shared actor class DAO() = this {
             };
             case (#increase_delay(new_delay)) {
                 //check if dissolving TEST
+                var delay : Int = new_delay;
+                if (new_delay < neuron.dissolve_delay) delay := neuron.dissolve_delay;
+
                 if (neuron.state == #locked) {
                     new_neuron := {
-                        new_neuron with dissolve_delay = new_delay
+                        new_neuron with dissolve_delay = delay
                     }
                 }
             };
@@ -437,7 +440,7 @@ shared actor class DAO() = this {
                     case (#locked) {
                         new_neuron := {
                             new_neuron with state = new_state;
-                            dissolve_delay = neuron.dissolve_delay - Option.get(neuron.dissolve_start, 0)
+                            dissolve_delay = neuron.dissolve_delay - TU.daysFromEpoch(Option.get(neuron.dissolve_start, 0))
                         }
                     }
                 }
@@ -614,6 +617,7 @@ shared actor class DAO() = this {
                 }
             };
             case (#err(text)) {
+                Debug.print(text);
                 vp := 0.0
             }
         };
@@ -636,16 +640,21 @@ shared actor class DAO() = this {
         var stake = neuron.stake;
 
         let days_since_last_unlock = TU.daysFromEpoch(Time.now() - Option.get(neuron.dissolve_start, neuron.creation_date));
-
+        Debug.print("days_since_last_unlock");
+        Debug.print(debug_show (days_since_last_unlock));
         if (neuron.state != #dissolving) {
             var capped_days = days_since_last_unlock;
             if (capped_days > 365 * MAX_AGE_BONUS) {
                 capped_days := 365 * MAX_AGE_BONUS
             };
-            age_bonus := 0.00584 * Float.fromInt(capped_days)
+            age_bonus := age_bonus + (0.0001712 * Float.fromInt(capped_days))
         };
 
-        var remaining_days = TU.daysFromEpoch(neuron.dissolve_delay);
+        if (age_bonus > AGE_BONUS_END) age_bonus := AGE_BONUS_END; //to round
+
+        var remaining_days = neuron.dissolve_delay;
+        Debug.print("remaining_days");
+        Debug.print(debug_show (remaining_days));
         if (remaining_days < MIN_LOCKUP_MONTHS * 30) {
             return 0
         };
@@ -654,7 +663,22 @@ shared actor class DAO() = this {
         if (capped_remaining_days > MAX_LOCKUP_MONTHS * 30) {
             capped_remaining_days := MAX_LOCKUP_MONTHS * 30
         };
-        age_bonus := Float.fromInt(capped_remaining_days) * 0.0019535;
+
+        //let lockup_bonus_daily_factor = (MAX_LOCKUP_MONTHS - MIN_LOCKUP_MONTHS) / (LOCKUP_BONUS_END - LOCKUP_BONUS_START)
+        lockup_bonus := lockup_bonus + (Float.fromInt(capped_remaining_days) * 0.00034337);
+
+        if (lockup_bonus > Float.fromInt(LOCKUP_BONUS_END)) lockup_bonus := Float.fromInt(LOCKUP_BONUS_END); //to round
+        //2.737,5
+        Debug.print("lockup_bonus");
+        Debug.print(debug_show (lockup_bonus));
+        Debug.print("age_bonus");
+        Debug.print(debug_show (age_bonus));
+        Debug.print("stake");
+        Debug.print(debug_show (stake));
+
+        Debug.print("vp neuron ");
+        Debug.print(debug_show (neuron.id));
+        Debug.print(debug_show (stake * age_bonus * lockup_bonus));
 
         return stake * age_bonus * lockup_bonus
     };
