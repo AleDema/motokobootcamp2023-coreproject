@@ -74,7 +74,7 @@ function App() {
   const dotransfer = async () => {
     //console.log(wallet.principal)
     //let principal = Principal.fromText("jsznl-dkl5x-uqwae-2imi4-l6yvy-ya4ov-6fkgj-5eo33-3f7sc-hfg6t-3qe")
-    let principal = Principal.fromUint8Array(deposit.principal)
+    let principal = deposit.principal
     console.log(await auth_ledger.icrc1_transfer({
       to: { owner: principal, subaccount: [] }, fee: [1000000n], memo: [], from_subaccount: [], created_at_time: [], amount: 1000n
     }))
@@ -83,9 +83,9 @@ function App() {
 
   const dotransferaccount = async () => {
     console.log(wallet.principal)
-    let principal = Principal.fromText("jsznl-dkl5x-uqwae-2imi4-l6yvy-ya4ov-6fkgj-5eo33-3f7sc-hfg6t-3qe")
+    let principal = deposit.principal
     console.log(await auth_ledger.icrc1_transfer({
-      to: { owner: principal, subaccount: [to32bits(1)] }, fee: [1000000n], memo: [], from_subaccount: [], created_at_time: [], amount: 1000n
+      to: { owner: principal, subaccount: [deposit.subaccount] }, fee: [1000000n], memo: [], from_subaccount: [], created_at_time: [], amount: 1000n
     }))
   }
 
@@ -98,10 +98,10 @@ function App() {
 
 
   const getbalanceacc = async () => {
-    let principal = Principal.fromText("jsznl-dkl5x-uqwae-2imi4-l6yvy-ya4ov-6fkgj-5eo33-3f7sc-hfg6t-3qe")
-    console.log(principal)
+    // let principal = Principal.fromText("jsznl-dkl5x-uqwae-2imi4-l6yvy-ya4ov-6fkgj-5eo33-3f7sc-hfg6t-3qe")
+    // console.log(principal)
     console.log(await auth_ledger.icrc1_balance_of({
-      owner: deposit.principal, subaccount: deposit.subaccount
+      owner: deposit.principal, subaccount: [deposit.subaccount]
     }))
   }
 
@@ -114,15 +114,13 @@ function App() {
   let fake_creation = [Number(1579705832000000)]
   let fake_dissolve = []
 
-  //1674398316721558903
-  //1579705832000100000
-  //157970583200000000
-  //1579705832000000
-  //1579705832000000
-  //157970583200000
-  //1579705832000000000
+
   const create_debug_neuron = async () => {
     auth_dao.create_neuron_debug(10, lockup_years, fake_creation, fake_dissolve)
+  }
+
+  const check_deposit = async () => {
+    auth_dao.check_deposit(principal, [deposit.subaccount])
   }
 
   const initDeposit = async () => {
@@ -137,8 +135,8 @@ function App() {
       // console.log(principalToSubAccount(Principal.fromText(wallet.principal)));
       //setDeposit(accountIdentifierFromBytes(address))
       console.log(address)
-      console.log(Principal.fromUint8Array(address.principal))
-      console.log(accountIdentifierFromBytes(address.accountid))
+      // console.log(Principal.fromUint8Array(address.principal))
+      // console.log(accountIdentifierFromBytes(address.accountid))
       setDeposit(address)
     } else {
       setDeposit(null);
@@ -169,6 +167,7 @@ function App() {
       <button onClick={getbalanceacc}>get balance acc</button>
       <button onClick={addinternalbalance}>addinternalbalance</button>
       <button onClick={create_debug_neuron}>create debug neuron</button>
+      <button onClick={check_deposit}>check deposit</button>
       <div>
         {/* <Profile /> */}
         <p>{deposit?.accountid}</p>

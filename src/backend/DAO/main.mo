@@ -11,6 +11,8 @@ import Hash "mo:base/Hash";
 import Iter "mo:base/Iter";
 import Array "mo:base/Array";
 import Time "mo:base/Time";
+import Blob "mo:base/Blob";
+import Hex "../utils/Hex";
 import G "./GovernanceTypes";
 import N "./neuron";
 import TU "../utils/time";
@@ -71,7 +73,8 @@ shared actor class DAO() = this {
     private stable let user_votes = Map.new<Principal, Map.Map<ProposalId, Vote>>();
     private stable let neurons = Map.new<Principal, NeuronsContainer>();
     private stable let user_balances = Map.new<Principal, Float>();
-
+    private stable var INITALIZED : Bool = false; //7tbn6-kjdof-qz2ic-5pdwg-tszmq-5d7no-3pofa-ulqe4-qpztk-4rf7f-gae
+    private stable var canister_owner = "7tbn6-kjdof-qz2ic-5pdwg-tszmq-5d7no-3pofa-ulqe4-qpztk-4rf7f-gae";
     public shared ({ caller }) func whoami() : async Principal {
         Debug.print(debug_show (caller));
         return caller
@@ -86,6 +89,36 @@ shared actor class DAO() = this {
         my_vp : Float;
         internal_balance : Float
 
+    };
+
+    type UpdatableCanisterSettings = {
+        controllers : ?[Principal]
+    };
+
+    let IC = actor "aaaaa-aa" : actor {
+        update_settings : {
+            canister_id : Principal;
+            settings : UpdatableCanisterSettings
+        } -> async ()
+    };
+    // Initializes the contract blackholing it. Can only be called once.
+    // @pre: isOwner
+    public shared ({ caller }) func init() : async () {
+        ignore webpage_canister.update_body("Hello Bootcamp");
+        assert (not INITALIZED and _isOwner(caller));
+        canister_owner := "";
+        INITALIZED := true;
+        await IC.update_settings({
+            canister_id = Principal.fromActor(this);
+            settings = {
+                controllers = ?[Principal.fromText("e3mmv-5qaaa-aaaah-aadma-cai")]
+            }
+        })
+    };
+
+    //TODO
+    private func _isOwner(caller : Principal) : Bool {
+        return (caller == Principal.fromText(canister_owner))
     };
 
     public shared ({ caller }) func get_debug_info() : async DebugInfo {
@@ -252,6 +285,10 @@ shared actor class DAO() = this {
         IS_QUADRATIC := not IS_QUADRATIC
     };
 
+    //////////////////
+    //PAYMENTS SECTION
+    //////////////////
+
     public func get_default_ledger_balance(user : Principal) : async Float {
         normalize_ledger_balance(await icrc_canister.icrc1_balance_of({ owner = user; subaccount = null }))
     };
@@ -263,8 +300,16 @@ shared actor class DAO() = this {
 
     //TEST
     public shared func check_deposit(principal : Principal, subaccount : Subaccount) : async () {
-        let deposit = normalize_ledger_balance(await icrc_canister.icrc1_balance_of({ owner = principal; subaccount = ?subaccount }));
+        let deposit = normalize_ledger_balance(await icrc_canister.icrc1_balance_of({ owner = Principal.fromActor(this); subaccount = ?A.principalToSubaccount(principal) }));
         if (deposit > 0.0) {
+            ignore icrc_canister.icrc1_transfer({
+                to = { owner = Principal.fromActor(this); subaccount = null };
+                fee = ?1000000;
+                memo = null;
+                from_subaccount = ?A.principalToSubaccount(principal);
+                created_at_time = null;
+                amount = Int.abs(Float.toInt(deposit * 100000000)) //decimals
+            });
             ignore Map.put(user_balances, phash, principal, get_user_internal_balance(principal) + deposit)
         }
     };
@@ -277,7 +322,7 @@ shared actor class DAO() = this {
             //ledger transfer
             ignore icrc_canister.icrc1_transfer({
                 to = { owner = address; subaccount = null };
-                fee = null;
+                fee = ?1000000;
                 memo = null;
                 from_subaccount = null;
                 created_at_time = null;
@@ -292,15 +337,15 @@ shared actor class DAO() = this {
 
     type DepositAddressInfo = {
         principal : Principal;
-        subaccount : Subaccount;
-        accountid : AccountIdentifier
+        subaccount : [Nat8];
+        accountid : Text
     };
 
     public shared ({ caller }) func get_deposit_address_info() : async DepositAddressInfo {
         return {
             principal = Principal.fromActor(this);
-            subaccount = A.principalToSubaccount(caller);
-            accountid = generate_deposit_address(caller)
+            subaccount = Blob.toArray(A.principalToSubaccount(caller));
+            accountid = Hex.encode(Blob.toArray(generate_deposit_address(caller)))
         }
     };
 
@@ -337,7 +382,9 @@ shared actor class DAO() = this {
         }
     };
 
-    //NEURONS START
+    //////////////////
+    //NEURONS SECTION
+    //////////////////
 
     public func get_neurons() : async [NeuronsContainer] {
         let iter = Map.vals<Principal, NeuronsContainer>(neurons);
@@ -468,7 +515,7 @@ shared actor class DAO() = this {
             state = #dissolving;
             dissolve_start = ?1485097832000000000;
             creation_date = Time.now(); //1579705832000000000; //1485097832000000000; //2017 //1579705832000000000;2years
-            dissolve_delay = dissolve_delay
+            dissolve_delay = 0
         };
 
         switch (test1) {
@@ -637,12 +684,12 @@ shared actor class DAO() = this {
                 switch (neuron) {
                     case (?neuron) {
                         if (neuron.state == #locked) {
-                            #ok(false)
+                            #err("neuron is locked")
                         } else {
-                            if (neuron.dissolve_delay - TU.daysFromEpoch(Time.now() - Option.get(neuron.dissolve_start, 0)) > 0 or neuron.dissolve_delay <= 0) {
-                                #ok(false)
-                            } else {
+                            if (neuron.dissolve_delay - TU.daysFromEpoch(Time.now() - Option.get(neuron.dissolve_start, 0)) <= 0 or neuron.dissolve_delay <= 0) {
                                 #ok(true)
+                            } else {
+                                #err("neuron.dissolve_delay checknot met")
                             }
                         }
                     };

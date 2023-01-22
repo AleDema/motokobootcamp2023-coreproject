@@ -7,6 +7,7 @@ import Blob "mo:base/Blob";
 import Buffer "mo:base/Buffer";
 import Nat32 "mo:base/Nat32";
 import Nat8 "mo:base/Nat8";
+import Result "mo:base/Result";
 import Principal "mo:base/Principal";
 
 module Identity {
@@ -65,6 +66,30 @@ module Identity {
         Array.equal(beBytes(crc32), checksumPart, Nat8.equal)
     };
 
+    public type Account = {
+        owner : Principal;
+        subaccount : ?Subaccount
+    };
+
+    public func validate(account : Account) : Bool {
+        let is_anonymous = Principal.isAnonymous(account.owner);
+        let invalid_size = Principal.toBlob(account.owner).size() > 29;
+
+        if (is_anonymous or invalid_size) {
+            false
+        } else {
+            validate_subaccount(account.subaccount)
+        }
+    };
+    public func validate_subaccount(subaccount : ?Subaccount) : Bool {
+        switch (subaccount) {
+            case (?bytes) {
+                bytes.size() == 32
+            };
+            case (_) true
+        }
+    };
+
     public func principalToSubaccount(principal : Principal) : Blob {
         let idHash = SHA224.Digest();
         idHash.write(Blob.toArray(Principal.toBlob(principal)));
@@ -73,5 +98,35 @@ module Identity {
         let buf = Buffer.Buffer<Nat8>(32);
         Blob.fromArray(Array.append(crc32Bytes, hashSum))
     };
+
+    // public func accountIdentifierToText(accountIdentifier : AccountIdentifier, canisterId : ?Principal) : Result.Result<Text, AccountIdentifierToErr> {
+    //     switch (accountIdentifier) {
+    //         case (#text(identifier)) {
+    //             return #ok(identifier)
+    //         };
+    //         case (#principal(identifier)) {
+    //             let blobResult = accountIdentifierToBlob(accountIdentifier, canisterId);
+    //             switch (blobResult) {
+    //                 case (#ok(blob)) {
+    //                     return #ok(Hex.encode(Blob.toArray(blob)))
+    //                 };
+    //                 case (#err(err)) {
+    //                     return #err(err)
+    //                 }
+    //             }
+    //         };
+    //         case (#blob(identifier)) {
+    //             let blobResult = accountIdentifierToBlob(accountIdentifier, canisterId);
+    //             switch (blobResult) {
+    //                 case (#ok(blob)) {
+    //                     return #ok(Hex.encode(Blob.toArray(blob)))
+    //                 };
+    //                 case (#err(err)) {
+    //                     return #err(err)
+    //                 }
+    //             }
+    //         }
+    //     }
+    // };
 
 }

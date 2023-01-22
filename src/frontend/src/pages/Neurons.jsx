@@ -5,7 +5,7 @@ import { useSnapshot } from 'valtio'
 import state from "../context/global"
 
 //CANISTER
-import { DAO } from "@declarations/DAO"
+// import { DAO } from "@declarations/DAO"
 
 
 const Neurons = () => {
