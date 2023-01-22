@@ -39,7 +39,8 @@ const NeuronPage = () => {
     }
 
     const tryDelete = async () => {
-        await auth_dao.completely_dissolve_neuron(parseInt(id));
+        let res = await auth_dao.completely_dissolve_neuron(parseInt(id));
+        console.log(res)
     }
 
 

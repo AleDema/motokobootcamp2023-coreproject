@@ -442,6 +442,56 @@ shared actor class DAO() = this {
 
     };
 
+    public shared ({ caller }) func create_neuron_debug(stake : Float, dissolve_delay : Nat, fake_creation : ?Time.Time, fake_dissolve : ?Int) : async Result.Result<Text, Text> {
+
+        if (stake <= 0) return #err("invalid amount");
+        //has_enough_balance
+        if (not has_enough_balance(caller, stake)) return #err("no balance");
+
+        //internal_transfer
+        internal_transfer(caller, Principal.fromActor(this), stake);
+
+        //create neuron Map.new<Principal, (Nat, [Neuron])>()
+        let test1 : ?NeuronsContainer = do ? {
+            let first = Map.get(neurons, phash, caller);
+            first!
+        };
+
+        var neurons_temp : [Neuron] = [];
+        var id = 0;
+
+        var neuron : Neuron = {
+            id = id;
+            stake = stake;
+            state = #dissolving;
+            dissolve_start = ?1485097832000000000;
+            creation_date = Time.now(); //1579705832000000000; //1485097832000000000; //2017 //1579705832000000000;2years
+            dissolve_delay = dissolve_delay
+        };
+
+        switch (test1) {
+            case (?record) {
+                //if user already has at least 1 neuron
+                neuron := { neuron with id = record.current_neuron_id };
+                id := record.current_neuron_id;
+                neurons_temp := Array.append(record.neurons, [neuron])
+
+            };
+            case (_) {
+                neurons_temp := [neuron]
+            }
+        };
+
+        let neurons_container : NeuronsContainer = {
+            current_neuron_id : Nat = id + 1;
+            neurons = neurons_temp
+        };
+
+        ignore Map.put(neurons, phash, caller, neurons_container);
+        #ok("Neuron created")
+
+    };
+
     private func process_neuron_state_change(owner : Principal, neuron : Neuron, change : NeuronActions) : Neuron {
         var new_neuron = neuron;
         switch (change) {
@@ -587,7 +637,7 @@ shared actor class DAO() = this {
                         if (neuron.state == #locked) {
                             #ok(false)
                         } else {
-                            if (neuron.dissolve_delay - Option.get(neuron.dissolve_start, 0) > 0) {
+                            if (neuron.dissolve_delay - TU.daysFromEpoch(Time.now() - Option.get(neuron.dissolve_start, 0)) > 0 or neuron.dissolve_delay <= 0) {
                                 #ok(false)
                             } else {
                                 #ok(true)
@@ -678,11 +728,13 @@ shared actor class DAO() = this {
 
     //TEST
     private func calculate_neuron_vp(neuron : Neuron) : Float {
+        Debug.print("calculate_neuron_vp START");
         var lockup_bonus = LOCKUP_BONUS_START;
         var age_bonus = AGE_BONUS_START;
         var stake = neuron.stake;
 
         let days_since_last_unlock = TU.daysFromEpoch(Time.now() - Option.get(neuron.dissolve_start, neuron.creation_date));
+        //Debug.print("TIME.NOW: " # debug_show (Time.now()) # " , " # debug_show (Option.get(neuron.dissolve_start, neuron.creation_date)));
         Debug.print("days_since_last_unlock");
         Debug.print(debug_show (days_since_last_unlock));
         if (neuron.state != #dissolving) {
@@ -693,7 +745,7 @@ shared actor class DAO() = this {
             age_bonus := age_bonus + (0.0001712 * Float.fromInt(capped_days))
         };
 
-        if (age_bonus > AGE_BONUS_END) age_bonus := AGE_BONUS_END; //to round
+        if (age_bonus > AGE_BONUS_END) age_bonus := AGE_BONUS_END; // round
 
         var remaining_days = neuron.dissolve_delay;
         Debug.print("remaining_days");
@@ -710,7 +762,7 @@ shared actor class DAO() = this {
         //let lockup_bonus_daily_factor = (MAX_LOCKUP_MONTHS - MIN_LOCKUP_MONTHS) / (LOCKUP_BONUS_END - LOCKUP_BONUS_START)
         lockup_bonus := lockup_bonus + (Float.fromInt(capped_remaining_days) * 0.00034337);
 
-        if (lockup_bonus > Float.fromInt(LOCKUP_BONUS_END)) lockup_bonus := Float.fromInt(LOCKUP_BONUS_END); //to round
+        if (lockup_bonus > Float.fromInt(LOCKUP_BONUS_END)) lockup_bonus := Float.fromInt(LOCKUP_BONUS_END); // round
         //2.737,5
         Debug.print("lockup_bonus");
         Debug.print(debug_show (lockup_bonus));
@@ -719,9 +771,7 @@ shared actor class DAO() = this {
         Debug.print("stake");
         Debug.print(debug_show (stake));
 
-        Debug.print("vp neuron ");
-        Debug.print(debug_show (neuron.id));
-        Debug.print(debug_show (stake * age_bonus * lockup_bonus));
+        Debug.print("vp neuron id: " # debug_show (neuron.id) # " VP:" # debug_show (stake * age_bonus * lockup_bonus));
 
         return stake * age_bonus * lockup_bonus
     };

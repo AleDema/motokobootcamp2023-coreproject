@@ -110,8 +110,19 @@ function App() {
     auth_dao.add_balance_debug(10000)
   }
 
-  const createneuron = async () => {
-    auth_dao.create_neuron(10, 365 * 8)
+  let lockup_years = 365 * 4
+  let fake_creation = [Number(1579705832000000)]
+  let fake_dissolve = []
+
+  //1674398316721558903
+  //1579705832000100000
+  //157970583200000000
+  //1579705832000000
+  //1579705832000000
+  //157970583200000
+  //1579705832000000000
+  const create_debug_neuron = async () => {
+    auth_dao.create_neuron_debug(10, lockup_years, fake_creation, fake_dissolve)
   }
 
   const initDeposit = async () => {
@@ -156,7 +167,7 @@ function App() {
       <button onClick={getbalance}>get balance</button>
       <button onClick={getbalanceacc}>get balance acc</button>
       <button onClick={addinternalbalance}>addinternalbalance</button>
-      <button onClick={createneuron}>create neuron</button>
+      <button onClick={create_debug_neuron}>create debug neuron</button>
       <div>
         {/* <Profile /> */}
         <p>{deposit?.accountid}</p>
