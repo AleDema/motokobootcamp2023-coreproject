@@ -11,6 +11,7 @@ import Hash "mo:base/Hash";
 import Iter "mo:base/Iter";
 import Array "mo:base/Array";
 import Time "mo:base/Time";
+import Text "mo:base/Text";
 import Blob "mo:base/Blob";
 import Hex "../utils/Hex";
 import G "./GovernanceTypes";
@@ -316,7 +317,7 @@ shared actor class DAO() = this {
     };
 
     //TEST
-    public shared ({ caller }) func check_deposit() : async () {
+    public shared ({ caller }) func check_deposit() : async Result.Result<Text, Text> {
         let deposit = await icrc_canister.icrc1_balance_of({
             owner = Principal.fromActor(this);
             subaccount = ?A.principalToSubaccount(caller)
@@ -336,9 +337,12 @@ shared actor class DAO() = this {
                 amount = (deposit - 1000000) //decimals
             });
             Debug.print("ledger response " # debug_show (res));
-            ignore Map.put(user_balances, phash, caller, get_user_internal_balance(Principal.fromActor(this)) + normal_deposit);
-            Debug.print("SUCCESS DEPOSIT " # debug_show (get_user_internal_balance(caller)))
-        }
+            ignore Map.put(user_balances, phash, caller, get_user_internal_balance(caller) + normal_deposit);
+            Debug.print("SUCCESS DEPOSIT " # debug_show (get_user_internal_balance(caller)));
+            return #ok("Deposit success! New Balance" # Float.toText(get_user_internal_balance(caller)))
+        };
+
+        #err("Deposit address empty")
     };
 
     //TEST

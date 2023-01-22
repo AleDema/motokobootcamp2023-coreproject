@@ -43,6 +43,9 @@ import { Profile } from "./components/Profile"
 function App() {
 
   const [deposit, setDeposit] = useState({})
+  const [sendAmount, setSendAmount] = useState(0)
+  const [withAmount, setWithAmount] = useState(0)
+  const [withPrincipal, setWithPrincipal] = useState(0)
   const [isConnected, setIsConnected] = useState(false)
   const [wallet] = useWallet()
   const [auth_dao, { loading, error }] = useCanister("DAO")
@@ -63,7 +66,7 @@ function App() {
     //let principal = Principal.fromText("jsznl-dkl5x-uqwae-2imi4-l6yvy-ya4ov-6fkgj-5eo33-3f7sc-hfg6t-3qe")
     let principal = deposit.principal
     console.log(await auth_ledger.icrc1_transfer({
-      to: { owner: principal, subaccount: [] }, fee: [BigInt(1000000)], memo: [], from_subaccount: [], created_at_time: [], amount: BigInt(10000000000)
+      to: { owner: principal, subaccount: [] }, fee: [BigInt(1000000)], memo: [], from_subaccount: [], created_at_time: [], amount: BigInt(sendAmount * 100000000)
     }))
   }
 
@@ -73,7 +76,7 @@ function App() {
     console.log(wallet.principal)
     let principal = deposit.principal
     console.log(await auth_ledger.icrc1_transfer({
-      to: { owner: principal, subaccount: [deposit.subaccount] }, fee: [BigInt(1000000)], memo: [], from_subaccount: [], created_at_time: [], amount: BigInt(10000000000)
+      to: { owner: principal, subaccount: [deposit.subaccount] }, fee: [BigInt(1000000)], memo: [], from_subaccount: [], created_at_time: [], amount: BigInt(sendAmount * 100000000)
     }))
   }
 
@@ -125,7 +128,7 @@ function App() {
   }
 
   const withdraw = async () => {
-    let res = await auth_dao.withdraw(Principal.fromText(wallet.principal), Number.parseFloat(1))
+    let res = await auth_dao.withdraw(Principal.fromText(wallet.principal), Number.parseFloat(sendAmount))
     console.log(res)
   }
 
@@ -149,7 +152,7 @@ function App() {
       let daoLedgerBal = await check_dao_ledger_balance()
       let daoInternalBal = await check_dao_internal_balance()
       setLedgerBalance(Number(userledgerBal) / 100000000)
-      setDaoLedgerBalance(Number(daoLedgerBal) / 100000000)
+      setDaoLedgerBalance(Number(daoLedgerBal))
       setInternalDaoBalance(daoInternalBal)
       setDepositLedgerBalance(Number(depositAccBal) / 100000000)
       setInternalBalance(debug_infos?.internal_balance)
@@ -190,25 +193,34 @@ function App() {
             <p>minVp required {Number(minVp)}</p>
             <p>proposal approve threshold {Number(propThreshold)}</p>
             <p>isQuadratic mode {String(isQuadratic)}</p>
-            <p>DAO balance on ledger {Number(daoLedgerBalance)}</p>
+            <p>DAO balance on ledger {daoLedgerBalance}</p>
             <p>user DAO balance {internalBalance}</p>
             <p>DAO internal balance {internalDaoBalance}</p>
             <p>deposit address ledger balance {Number(depositLedgerBalance)}</p>
           </div>
-          <button onClick={dotransferaccount}>tranfer to deposit addr</button>
+
+          <div>
+            <input className="text-black  w-5/12" type="text"
+              value={sendAmount}
+              placeholder="Amount"
+              onChange={(e) => setSendAmount(e.target.value)}></input>
+            <button onClick={dotransferaccount}>tranfer to deposit addr</button>
+          </div>
           {/* <button onClick={getbalance}>get user balance</button>
           <button onClick={getbalanceacc}>get deposit acc balance</button> */}
           {/* <button onClick={addinternalbalance}>addinternalbalance</button> */}
           <button onClick={check_deposit}>check deposit</button>
           {/* <button onClick={check_dao_ledger_balance}>check canister ledger balance</button>
           <button onClick={check_dao_internal_balance}>check canister internal balance</button> */}
-          <button onClick={withdraw}>withdraw to ledger</button>
-          <button onClick={create_debug_neuron}>create debug neuron</button>
+          <div>
+            <button onClick={withdraw}>withdraw to ledger</button>
+          </div>
+          <button onClick={create_debug_neuron}>create debug neuron (immediately dissolvable)</button>
           <div>
             <Link to="/dao">DAO</Link>
             <br></br>
             <Link to="/neurons">Neurons</Link>
-            <p>Deposit account id (use to load tokens in the DAO){deposit?.accountid}</p>
+            <p>Deposit account id (use to load tokens in the DAO): {deposit?.accountid}</p>
           </div>
         </div>
         : <p>Login to access functionality</p>}
