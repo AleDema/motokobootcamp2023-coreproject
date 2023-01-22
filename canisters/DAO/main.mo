@@ -27,7 +27,7 @@ shared actor class DAO() = this {
     let IS_LOCAL_ENV = true;
     var DEV_MODE = true;
     let main_ledger_principal = "db3eq-6iaaa-aaaah-abz6a-cai";
-    let local_ledger_principal = "ai7t5-aibaq-aaaaa-aaaaa-c";
+    let local_ledger_principal = "l7jw7-difaq-aaaaa-aaaaa-c";
     var icrc_principal = main_ledger_principal;
     if (IS_LOCAL_ENV) {
         icrc_principal := local_ledger_principal
@@ -356,7 +356,7 @@ shared actor class DAO() = this {
                 created_at_time = null;
                 amount = Int.abs(Float.toInt(amount * 100000000)) //decimals
             });
-            return #ok("withdraal success")
+            return #ok("withdraal success") //TODO check
         };
         #err("no balance")
     };

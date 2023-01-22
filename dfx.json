@@ -1,21 +1,25 @@
 {
   "canisters": {
+    "counter": {
+      "main": "canisters/counter/main.mo",
+      "type": "motoko"
+    },
     "DAO": {
-      "main": "src/backend/DAO/main.mo",
+      "main": "canisters/DAO/main.mo",
       "type": "motoko",
       "dependencies": [
         "Webpage"
       ]
     },
     "Webpage": {
-      "main": "src/backend/Webpage/webpage.mo",
+      "main": "canisters/Webpage/webpage.mo",
       "type": "motoko"
     },
     "ledger": {
       "type": "motoko",
-      "main": "src/backend/ledger/Canisters/Token.mo",
+      "main": "canisters/ledger/Canisters/Token.mo",
       "remote": {
-        "candid": "src/backend/ledger/icrc1.did",
+        "candid": "canisters/ledger/icrc1.did",
         "id": {
           "ic": "db3eq-6iaaa-aaaah-abz6a-cai"
         }
@@ -23,10 +27,11 @@
     },
     "assets": {
       "dependencies": [
+        "counter",
         "DAO"
       ],
       "frontend": {
-        "entrypoint": "src/frontend/src/dist/index.html"
+        "entrypoint": "dist/index.html"
       },
       "source": [
         "dist/"
