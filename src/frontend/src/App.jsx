@@ -118,9 +118,17 @@ function App() {
   const create_debug_neuron = async () => {
     auth_dao.create_neuron_debug(10, lockup_years, fake_creation, fake_dissolve)
   }
-
   const check_deposit = async () => {
-    auth_dao.check_deposit(principal, [deposit.subaccount])
+    auth_dao.check_deposit(deposit.principal, deposit.subaccount)
+  }
+
+  const check_dao_ledger_balance = async () => {
+    auth_dao.get_default_dao_ledger_balance()
+  }
+
+
+  const check_dao_internal_balance = async () => {
+    auth_dao.get_default_dao_ledger_balance()
   }
 
   const initDeposit = async () => {
@@ -162,12 +170,14 @@ function App() {
       </div>
       <button onClick={whoami}>get id</button>
       <button onClick={dotransfer}>tranfer</button>
-      <button onClick={dotransferaccount}>tranfer acc</button>
-      <button onClick={getbalance}>get balance</button>
-      <button onClick={getbalanceacc}>get balance acc</button>
+      <button onClick={dotransferaccount}>tranfer to deposit addr</button>
+      <button onClick={getbalance}>get user balance</button>
+      <button onClick={getbalanceacc}>get deposit acc balance</button>
       <button onClick={addinternalbalance}>addinternalbalance</button>
-      <button onClick={create_debug_neuron}>create debug neuron</button>
       <button onClick={check_deposit}>check deposit</button>
+      <button onClick={check_dao_ledger_balance}>check canister ledger balance</button>
+      <button onClick={check_deposit}>check canister internal balance</button>
+      <button onClick={create_debug_neuron}>create debug neuron</button>
       <div>
         {/* <Profile /> */}
         <p>{deposit?.accountid}</p>

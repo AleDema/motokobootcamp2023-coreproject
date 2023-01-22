@@ -289,8 +289,13 @@ shared actor class DAO() = this {
     //PAYMENTS SECTION
     //////////////////
 
-    public func get_default_ledger_balance(user : Principal) : async Float {
+    public func get_default_user_ledger_balance(user : Principal) : async Float {
         normalize_ledger_balance(await icrc_canister.icrc1_balance_of({ owner = user; subaccount = null }))
+    };
+
+    public func get_default_dao_ledger_balance() : async Float {
+        Debug.print(" DEPOSIT " # debug_show (await icrc_canister.icrc1_balance_of({ owner = Principal.fromActor(this); subaccount = null })));
+        normalize_ledger_balance(await icrc_canister.icrc1_balance_of({ owner = Principal.fromActor(this); subaccount = null }))
     };
 
     private func normalize_ledger_balance(amount : Nat) : Float {
@@ -301,6 +306,8 @@ shared actor class DAO() = this {
     //TEST
     public shared func check_deposit(principal : Principal, subaccount : Subaccount) : async () {
         let deposit = normalize_ledger_balance(await icrc_canister.icrc1_balance_of({ owner = Principal.fromActor(this); subaccount = ?A.principalToSubaccount(principal) }));
+        Debug.print(" DEPOSIT " # debug_show (deposit));
+        Debug.print(" DEPOSIT " # debug_show (await icrc_canister.icrc1_balance_of({ owner = Principal.fromActor(this); subaccount = ?A.principalToSubaccount(principal) })));
         if (deposit > 0.0) {
             ignore icrc_canister.icrc1_transfer({
                 to = { owner = Principal.fromActor(this); subaccount = null };
@@ -310,7 +317,8 @@ shared actor class DAO() = this {
                 created_at_time = null;
                 amount = Int.abs(Float.toInt(deposit * 100000000)) //decimals
             });
-            ignore Map.put(user_balances, phash, principal, get_user_internal_balance(principal) + deposit)
+            ignore Map.put(user_balances, phash, principal, get_user_internal_balance(principal) + deposit);
+            Debug.print("SUCCESS DEPOSIT " # debug_show (get_user_internal_balance(principal)))
         }
     };
 
@@ -740,11 +748,11 @@ shared actor class DAO() = this {
     private func get_voting_power(user : Principal) : async Float {
 
         if (IS_QUADRATIC) {
-            return (Float.sqrt(await get_default_ledger_balance(user)))
+            return (Float.sqrt(await get_default_user_ledger_balance(user)))
         };
 
         switch (current_vp_mode) {
-            case (#basic) await get_default_ledger_balance(user);
+            case (#basic) await get_default_user_ledger_balance(user);
             case (#advanced) { calculate_user_vp(user) } //CHORE wrap
         }
     };
