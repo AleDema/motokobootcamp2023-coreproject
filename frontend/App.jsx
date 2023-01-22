@@ -55,7 +55,7 @@ function App() {
   const [votingMode, setVotingMode] = useState(0)
   const [minVp, setMinVP] = useState(0)
   const [propThreshold, setPropThreshold] = useState(0)
-  const [isQuadratic, setIsQuadratic] = useState(false)
+  const [isQuadratic, setIsQuadratic] = useState("")
   const [daoLedgerBalance, setDaoLedgerBalance] = useState(0)
   const [internalBalance, setInternalBalance] = useState(0)
   const [internalDaoBalance, setInternalDaoBalance] = useState(0)
@@ -139,7 +139,7 @@ function App() {
 
   const init = async (principal) => {
     if (principal) {
-      //console.log(await auth_dao.get_debug_info())
+      console.log(principal)
       console.log("CONNECTED: ")
       let address = await auth_dao.get_deposit_address_info();
       // console.log(address)
@@ -147,20 +147,24 @@ function App() {
       setIsConnected(true)
       let debug_infos = await auth_dao.get_debug_info()
       console.log(debug_infos)
-      setIsQuadratic(Boolean(debug_infos?.isQuadratic).toString())
+      let quadratic = "false"
+      if (debug_infos?.isQuadratic === true) {
+        quadratic = "true"
+      }
+      setIsQuadratic(quadratic)
       setVotingPower(debug_infos?.my_vp)
       setMinVP(debug_infos?.min_vp_required)
       setPropThreshold(debug_infos?.proposal_vp_threshold)
       setVotingMode(debug_infos?.current_vp_mode)
-      let depositAccBal = await getbalanceacc(address)
-      let userledgerBal = await getbalance()
-      let daoLedgerBal = await check_dao_ledger_balance()
-      let daoInternalBal = await check_dao_internal_balance()
-      setLedgerBalance(Number(userledgerBal) / 100000000)
-      setDaoLedgerBalance(Number(daoLedgerBal))
-      setInternalDaoBalance(daoInternalBal)
-      setDepositLedgerBalance(Number(depositAccBal) / 100000000)
       setInternalBalance(debug_infos?.internal_balance)
+      let depositAccBal = await getbalanceacc(address)
+      setDepositLedgerBalance(Number(depositAccBal) / 100000000)
+      let userledgerBal = await getbalance()
+      setLedgerBalance(Number(userledgerBal) / 100000000)
+      let daoLedgerBal = await check_dao_ledger_balance()
+      setDaoLedgerBalance(Number(daoLedgerBal))
+      let daoInternalBal = await check_dao_internal_balance()
+      setInternalDaoBalance(daoInternalBal)
     } else {
       setIsConnected(false)
       setDeposit(null);
@@ -192,16 +196,16 @@ function App() {
       {isConnected ?
         <div>
           <div>
-            <p>user ledger balance {Number(ledgerBalance)}</p>
-            <p>user VP {votingPower}</p>
-            <p>current voting mode {JSON.stringify(votingMode)}</p>
-            <p>minVp required {Number(minVp)}</p>
-            <p>proposal approve threshold {Number(propThreshold)}</p>
-            <p>isQuadratic mode {String(isQuadratic)}</p>
-            <p>DAO balance on ledger {daoLedgerBalance}</p>
-            <p>user DAO balance {internalBalance}</p>
-            <p>DAO internal balance {internalDaoBalance}</p>
-            <p>deposit address ledger balance {Number(depositLedgerBalance)}</p>
+            <p>Your ledger balance: {Number(ledgerBalance)} MBT</p>
+            <p>Your Voting Power: {votingPower}</p>
+            <p>Current voting mode {JSON.stringify(votingMode)}</p>
+            <p>Minimum VP required to vote: {Number(minVp)}</p>
+            <p>Proposal Approve Threshold: {Number(propThreshold)}</p>
+            <p>Is Quadratic mode on: {String(isQuadratic)}</p>
+            <p>DAO Balance on MBT ledger: {daoLedgerBalance} MBT</p>
+            <p>Your DAO balance: {internalBalance}</p>
+            <p>DAO internal balance: {internalDaoBalance}</p>
+            <p>Deposit Address MBT Balance: {Number(depositLedgerBalance)} MBT</p>
           </div>
 
           <div>
@@ -209,18 +213,13 @@ function App() {
               value={sendAmount}
               placeholder="Amount"
               onChange={(e) => setSendAmount(e.target.value)}></input>
-            <button onClick={dotransferaccount}>tranfer to deposit addr</button>
+            <button onClick={dotransferaccount}>Tranfer to deposit address</button>
           </div>
-          {/* <button onClick={getbalance}>get user balance</button>
-          <button onClick={getbalanceacc}>get deposit acc balance</button> */}
-          {/* <button onClick={addinternalbalance}>addinternalbalance</button> */}
-          <button onClick={check_deposit}>check deposit</button>
-          {/* <button onClick={check_dao_ledger_balance}>check canister ledger balance</button>
-          <button onClick={check_dao_internal_balance}>check canister internal balance</button> */}
+          <button onClick={check_deposit}>Check Deposit</button>
           <div>
-            <button onClick={withdraw}>withdraw to ledger</button>
+            <button onClick={withdraw}>Withdraw to ledger (current principal)</button>
           </div>
-          <button onClick={create_debug_neuron}>create debug neuron (immediately dissolvable, 10 MBT required)</button>
+          <button onClick={create_debug_neuron}>Create debug neuron (immediately dissolvable, 10 MBT required)</button>
           <div>
             <Link to="/dao">DAO</Link>
             <br></br>
@@ -230,7 +229,6 @@ function App() {
         </div>
         : <p>Login to access functionality</p>}
       <div>
-        {/* <Profile /> */}
         <a href="https://tpyud-myaaa-aaaap-qa4gq-cai.ic0.app/">Webpage </a>
       </div>
     </>

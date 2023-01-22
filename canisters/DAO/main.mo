@@ -37,7 +37,7 @@ shared actor class DAO() = this {
     //todo swap on main
     let main_webpage_principal = "tpyud-myaaa-aaaap-qa4gq-cai";
     let local_webpage_principal = "hozae-racaq-aaaaa-aaaaa-c";
-    var webpage_principal = main_ledger_principal;
+    var webpage_principal = main_webpage_principal;
     if (IS_LOCAL_ENV) {
         webpage_principal := local_webpage_principal
     };

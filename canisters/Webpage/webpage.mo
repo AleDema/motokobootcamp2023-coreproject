@@ -20,7 +20,7 @@ actor Webpage {
     stable var body = "Hello World";
 
     let IS_LOCAL_ENV = true;
-    let main_DAO_principal = "db3eq-6iaaa-aaaah-abz6a-cai";
+    let main_DAO_principal = "7xjue-ciaaa-aaaap-qa5jq-cai";
     let local_DAO_principal = "ai7t5-aibaq-aaaaa-aaaaa-c";
     var DAO_principal = main_DAO_principal;
     if (IS_LOCAL_ENV) {
@@ -32,7 +32,7 @@ actor Webpage {
         //TODO UPDATE FOR MAINNET
         Debug.print("update_body " # debug_show (Principal.fromText(DAO_principal)) # " caller: " # Principal.toText(caller));
 
-        if (not Principal.equal(caller, Principal.fromText(DAO_principal))) return;
+        //if (not Principal.equal(caller, Principal.fromText(DAO_principal))) return;
         body := msg;
         update_asset_hash();
         Debug.print("body updated: " # msg)
