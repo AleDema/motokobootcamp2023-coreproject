@@ -18,10 +18,18 @@ actor Webpage {
     public type HttpResponse = Http.HttpResponse;
     stable var body = "Hello World";
 
+    let IS_LOCAL_ENV = true;
+    let main_DAO_principal = "db3eq-6iaaa-aaaah-abz6a-cai";
+    let local_DAO_principal = "l7jw7-difaq-aaaaa-aaaaa-c";
+    var DAO_principal = main_DAO_principal;
+    if (IS_LOCAL_ENV) {
+        DAO_principal := local_DAO_principal
+    };
+
     //must be called on init to work
     public shared ({ caller }) func update_body(msg : Text) : async () {
         //TODO UPDATE FOR MAINNET
-        if (not Principal.equal(caller, Principal.fromText("fterm-bydaq-aaaaa-aaaaa-c"))) return;
+        if (not Principal.equal(caller, Principal.fromText(DAO_principal))) return;
         body := msg;
         update_asset_hash()
     };

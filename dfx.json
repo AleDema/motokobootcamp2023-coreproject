@@ -1,9 +1,5 @@
 {
   "canisters": {
-    "counter": {
-      "main": "canisters/counter/main.mo",
-      "type": "motoko"
-    },
     "DAO": {
       "main": "canisters/DAO/main.mo",
       "type": "motoko",
@@ -27,7 +23,6 @@
     },
     "assets": {
       "dependencies": [
-        "counter",
         "DAO"
       ],
       "frontend": {

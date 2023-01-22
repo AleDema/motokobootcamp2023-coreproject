@@ -22,7 +22,6 @@ import A "../utils/Account";
 
 shared actor class DAO() = this {
 
-    //TODO MAINNET CHECK WEBPAGE AND LEDGER CANISTER ID
     //change on main
     let IS_LOCAL_ENV = true;
     var DEV_MODE = true;

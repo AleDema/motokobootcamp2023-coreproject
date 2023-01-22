@@ -21,7 +21,6 @@ import "@connect2ic/core/style.css"
 /*
  * Import canister definitions like this:
  */
-// import * as counter from "../.dfx/local/canisters/counter"
 import * as DAO from "../.dfx/local/canisters/DAO"
 // import idlFactory from "../.dfx/local/canisters/ledger.did.js"
 import { idlFactory as idlFactoryLedger } from "../.dfx/local/canisters/ledger/ledger.did.js"
@@ -38,17 +37,26 @@ import ProposalPage from "./pages/ProposalPage"
 import RootLayout from './layouts/RootLayout';
 import { PlugWallet } from "@connect2ic/core/providers/plug-wallet"
 
-import { Counter } from "./components/Counter"
 import { Transfer } from "./components/Transfer"
 import { Profile } from "./components/Profile"
 
 function App() {
 
   const [deposit, setDeposit] = useState({})
-  const { isConnected, disconnect, activeProvider } = useConnect();
+  const [isConnected, setIsConnected] = useState(false)
   const [wallet] = useWallet()
   const [auth_dao, { loading, error }] = useCanister("DAO")
   const [auth_ledger] = useCanister("ledger")
+  const [ledgerBalance, setLedgerBalance] = useState(0)
+  const [votingPower, setVotingPower] = useState(0)
+  const [votingMode, setVotingMode] = useState(0)
+  const [minVp, setMinVP] = useState(0)
+  const [propThreshold, setPropThreshold] = useState(0)
+  const [isQuadratic, setIsQuadratic] = useState(false)
+  const [daoLedgerBalance, setDaoLedgerBalance] = useState(0)
+  const [internalBalance, setInternalBalance] = useState(0)
+  const [internalDaoBalance, setInternalDaoBalance] = useState(0)
+  const [depositLedgerBalance, setDepositLedgerBalance] = useState(0)
 
   const dotransfer = async () => {
     console.log(auth_ledger)
@@ -70,17 +78,25 @@ function App() {
   }
 
   const getbalance = async () => {
-    console.log(wallet.principal)
+    let ledgerbalance = await auth_ledger.icrc1_balance_of({
+      owner: Principal.fromText(wallet.principal), subaccount: []
+    })
+
+
+    console.log("getbalance " + wallet.principal)
     console.log(await auth_ledger.icrc1_balance_of({
       owner: Principal.fromText(wallet.principal), subaccount: []
     }))
+
+    return ledgerbalance
   }
 
-  const getbalanceacc = async () => {
-
-    console.log(await auth_ledger.icrc1_balance_of({
-      owner: deposit.principal, subaccount: [deposit.subaccount]
-    }))
+  const getbalanceacc = async (addr) => {
+    let deposit_bal = await auth_ledger.icrc1_balance_of({
+      owner: addr.principal, subaccount: [addr.subaccount]
+    })
+    console.log(deposit_bal)
+    return deposit_bal
   }
 
   //add_balance_debug
@@ -101,11 +117,11 @@ function App() {
   }
 
   const check_dao_ledger_balance = async () => {
-    auth_dao.get_default_dao_ledger_balance()
+    return auth_dao.get_default_dao_ledger_balance()
   }
 
   const check_dao_internal_balance = async () => {
-    auth_dao.get_dao_internal_balance()
+    return auth_dao.get_dao_internal_balance()
   }
 
   const withdraw = async () => {
@@ -113,21 +129,43 @@ function App() {
     console.log(res)
   }
 
-  const initDeposit = async () => {
-    if (isConnected) {
-      console.log(await auth_dao.get_debug_info())
-      console.log("CONNECTED: " + isConnected)
+  const init = async (principal) => {
+    if (principal) {
+      //console.log(await auth_dao.get_debug_info())
+      console.log("CONNECTED: ")
       let address = await auth_dao.get_deposit_address_info();
       // console.log(address)
       setDeposit(address)
+      setIsConnected(true)
+      let debug_infos = await auth_dao.get_debug_info()
+      console.log(debug_infos)
+      setIsQuadratic(Boolean(debug_infos?.isQuadratic).toString())
+      setVotingPower(debug_infos?.my_vp)
+      setMinVP(debug_infos?.min_vp_required)
+      setPropThreshold(debug_infos?.proposal_vp_threshold)
+      setVotingMode(debug_infos?.current_vp_mode)
+      let depositAccBal = await getbalanceacc(address)
+      let userledgerBal = await getbalance()
+      let daoLedgerBal = await check_dao_ledger_balance()
+      let daoInternalBal = await check_dao_internal_balance()
+      setLedgerBalance(Number(userledgerBal) / 100000000)
+      setDaoLedgerBalance(Number(daoLedgerBal) / 100000000)
+      setInternalDaoBalance(daoInternalBal)
+      setDepositLedgerBalance(Number(depositAccBal) / 100000000)
+      setInternalBalance(debug_infos?.internal_balance)
     } else {
+      setIsConnected(false)
       setDeposit(null);
     }
   }
 
+  // useEffect(() => {
+  //   initDeposit()
+  // }, [isConnected])
+
   useEffect(() => {
-    initDeposit()
-  }, [isConnected])
+    init(wallet?.principal)
+  }, [wallet])
 
   useEffect(() => {
 
@@ -136,38 +174,56 @@ function App() {
 
   return (
     <>
-      <div className="auth-section">
-        <ConnectButton />
-      </div>
-      <ConnectDialog />
       <div>
         <img src={logo} className="logo h-28" alt="logo" />
       </div>
       <h1 className="text-5xl">Bootcamp DAO</h1>
       <div className="space-x-4">
       </div>
-      {/* <button onClick={whoami}>get id</button> */}
-      {/* <button onClick={dotransfer}>tranfer</button> */}
-      <button onClick={dotransferaccount}>tranfer to deposit addr</button>
-      <button onClick={getbalance}>get user balance</button>
-      <button onClick={getbalanceacc}>get deposit acc balance</button>
-      <button onClick={addinternalbalance}>addinternalbalance</button>
-      <button onClick={check_deposit}>check deposit</button>
-      <button onClick={check_dao_ledger_balance}>check canister ledger balance</button>
-      <button onClick={check_dao_internal_balance}>check canister internal balance</button>
-      <button onClick={withdraw}>withdraw to ledger</button>
-      <button onClick={create_debug_neuron}>create debug neuron</button>
+
+      {isConnected ?
+        <div>
+          <div>
+            <p>user ledger balance {Number(ledgerBalance)}</p>
+            <p>user VP {votingPower}</p>
+            <p>current voting mode {JSON.stringify(votingMode)}</p>
+            <p>minVp required {Number(minVp)}</p>
+            <p>proposal approve threshold {Number(propThreshold)}</p>
+            <p>isQuadratic mode {String(isQuadratic)}</p>
+            <p>DAO balance on ledger {Number(daoLedgerBalance)}</p>
+            <p>user DAO balance {internalBalance}</p>
+            <p>DAO internal balance {internalDaoBalance}</p>
+            <p>deposit address ledger balance {Number(depositLedgerBalance)}</p>
+          </div>
+          <button onClick={dotransferaccount}>tranfer to deposit addr</button>
+          {/* <button onClick={getbalance}>get user balance</button>
+          <button onClick={getbalanceacc}>get deposit acc balance</button> */}
+          {/* <button onClick={addinternalbalance}>addinternalbalance</button> */}
+          <button onClick={check_deposit}>check deposit</button>
+          {/* <button onClick={check_dao_ledger_balance}>check canister ledger balance</button>
+          <button onClick={check_dao_internal_balance}>check canister internal balance</button> */}
+          <button onClick={withdraw}>withdraw to ledger</button>
+          <button onClick={create_debug_neuron}>create debug neuron</button>
+          <div>
+            <Link to="/dao">DAO</Link>
+            <br></br>
+            <Link to="/neurons">Neurons</Link>
+            <p>Deposit account id (use to load tokens in the DAO){deposit?.accountid}</p>
+          </div>
+        </div>
+        : <p>Login to access functionality</p>}
       <div>
         {/* <Profile /> */}
-        <p>{deposit?.accountid}</p>
         <a href="https://tpyud-myaaa-aaaap-qa4gq-cai.ic0.app/">Webpage </a>
-        {isConnected ? <Link to="/dao">DAO</Link> : null}
-        {isConnected ? <Link to="/neurons">Neurons</Link> : null}
       </div>
     </>
 
   )
 }
+
+
+// let ledgerCanisterId = import.meta.env.DEV ? "l7jw7-difaq-aaaaa-aaaaa-c" : "db3eq-6iaaa-aaaah-abz6a-cai"
+// console.log(ledgerCanisterId)
 
 const client = createClient({
   canisters: {
