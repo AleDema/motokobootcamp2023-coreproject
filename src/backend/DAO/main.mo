@@ -334,7 +334,7 @@ shared actor class DAO() = this {
                 memo = null;
                 from_subaccount = ?A.principalToSubaccount(caller);
                 created_at_time = null;
-                amount = deposit //decimals
+                amount = (deposit - 1000000) //decimals
             });
             Debug.print("ledger response " # debug_show (res));
             ignore Map.put(user_balances, phash, caller, get_user_internal_balance(Principal.fromActor(this)) + normal_deposit);

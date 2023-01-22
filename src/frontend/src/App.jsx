@@ -131,7 +131,8 @@ function App() {
   }
 
   const withdraw = async () => {
-    auth_dao.withdraw(Principal.fromText(wallet.principal), Number.parseFloat(1))
+    let res = await auth_dao.withdraw(Principal.fromText(wallet.principal), Number.parseFloat(1))
+    console.log(res)
   }
 
   const initDeposit = async () => {
