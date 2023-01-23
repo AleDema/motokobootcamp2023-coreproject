@@ -46,12 +46,12 @@ const ProposalPage = () => {
 
     return (
         <div>
-            <p>{proposal?.title}</p>
-            <p>{proposal?.description}</p>
-            <p>{proposal?.change}</p>
-            <p>{JSON.stringify(proposal?.state)}</p>
-            <p>{parseInt(proposal?.approve_votes)}</p>
-            <p>{parseInt(proposal?.reject_votes)}</p>
+            <p>Title: {proposal?.title}</p>
+            <p>Description: {proposal?.description}</p>
+            <p>Proposed Change: {JSON.stringify(proposal?.change_data)}</p>
+            <p>Current State: {JSON.stringify(proposal?.state)}</p>
+            <p>Approve Votes: {parseInt(proposal?.approve_votes)}</p>
+            <p>Reject Votes: {parseInt(proposal?.reject_votes)}</p>
             {proposal?.state?.approved === null || proposal?.state?.rejected === null ? null :
                 <div>
                     <button onClick={accept}>

@@ -34,7 +34,6 @@ shared actor class DAO() = this {
     };
     let icrc_canister = actor (icrc_principal) : ICRCTypes.TokenInterface;
 
-    //todo swap on main
     let main_webpage_principal = "tpyud-myaaa-aaaap-qa4gq-cai";
     let local_webpage_principal = "hozae-racaq-aaaaa-aaaaa-c";
     var webpage_principal = main_webpage_principal;
@@ -73,80 +72,17 @@ shared actor class DAO() = this {
     private stable let user_votes = Map.new<Principal, Map.Map<ProposalId, Vote>>();
     private stable let neurons = Map.new<Principal, NeuronsContainer>();
     private stable let user_balances = Map.new<Principal, Float>();
-    private stable var INITALIZED : Bool = false; //7tbn6-kjdof-qz2ic-5pdwg-tszmq-5d7no-3pofa-ulqe4-qpztk-4rf7f-gae
     private stable var canister_owner = "7tbn6-kjdof-qz2ic-5pdwg-tszmq-5d7no-3pofa-ulqe4-qpztk-4rf7f-gae";
-    public shared ({ caller }) func whoami() : async Principal {
-        Debug.print(debug_show (caller));
-        return caller
-    };
 
-    type DebugInfo = {
-        my_principal : Principal;
-        min_vp_required : Nat;
-        proposal_vp_threshold : Nat;
-        is_quadratic : Bool;
-        current_vp_mode : VotingPowerLogic;
-        my_vp : Float;
-        internal_balance : Float
-
-    };
-
-    type UpdatableCanisterSettings = {
-        controllers : ?[Principal]
-    };
-
-    let IC = actor "aaaaa-aa" : actor {
-        update_settings : {
-            canister_id : Principal;
-            settings : UpdatableCanisterSettings
-        } -> async ()
-    };
-    // Initializes the contract blackholing it. Can only be called once.
-    // @pre: isOwner
-    public shared ({ caller }) func init() : async () {
-        assert (not INITALIZED and _isOwner(caller));
-        canister_owner := "";
-        INITALIZED := true;
-        await IC.update_settings({
-            canister_id = Principal.fromActor(this);
-            settings = {
-                controllers = ?[Principal.fromText("e3mmv-5qaaa-aaaah-aadma-cai")]
-            }
-        })
-    };
-
-    public shared ({ caller }) func init_webpage() : async () {
-        assert (not INITALIZED and _isOwner(caller));
-        ignore webpage_canister.update_body("Hello Bootcamp")
-    };
-
-    //TODO
-    private func _isOwner(caller : Principal) : Bool {
-        return (caller == Principal.fromText(canister_owner))
-    };
-
-    public shared ({ caller }) func get_debug_info() : async DebugInfo {
-        let debug_data = {
-            my_principal = caller;
-            min_vp_required = MIN_VP_REQUIRED;
-            proposal_vp_threshold = PROPOSAL_VP_THESHOLD;
-            is_quadratic = IS_QUADRATIC;
-            current_vp_mode = current_vp_mode;
-            my_vp = await get_voting_power(caller);
-            internal_balance = get_user_internal_balance(caller)
-        };
-        Debug.print(debug_show (caller));
-        // Debug.print(debug_show (debug_data));
-        return debug_data
-    };
+    /////////////
+    //GOVERNANCE
+    ////////////
 
     public shared (msg) func submit_proposal(title : Text, description : Text, change : ProposalType) : async () {
         if (A.isAnonymous(msg.caller)) return;
 
         let vp = await get_voting_power(msg.caller);
         if (vp < Float.fromInt(MIN_VP_REQUIRED)) return;
-
-        //TODO input validation
 
         let p : Proposal = {
             id = proposal_id_counter;
@@ -160,10 +96,6 @@ shared actor class DAO() = this {
         ignore Map.put(proposals, nhash, p.id, p);
         Debug.print("CREATED PROPOSAL");
         proposal_id_counter := proposal_id_counter +1
-    };
-
-    public func change_voting_mode(new_mode : VotingPowerLogic) : async () {
-        current_vp_mode := new_mode
     };
 
     public query func get_proposal(id : ProposalId) : async Result.Result<Proposal, Text> {
@@ -214,7 +146,6 @@ shared actor class DAO() = this {
             second!
         };
 
-        // TEST
         switch (test1, test2) {
             case (?exists1, ?exist2) {
                 hasVoted := true
@@ -231,7 +162,6 @@ shared actor class DAO() = this {
             }
         };
 
-        //TODO ENABLE
         if (hasVoted) return;
 
         //if approved or rejected can't vote'
@@ -268,7 +198,7 @@ shared actor class DAO() = this {
     };
 
     private func modify_parameters(change : ProposalType) : async () {
-        //TEST proposal types
+
         switch (change) {
             case (#change_text(new_text)) {
                 ignore webpage_canister.update_body(new_text)
@@ -327,7 +257,6 @@ shared actor class DAO() = this {
         return Float.fromInt(amount) / 100000000
     };
 
-    //TEST
     public shared ({ caller }) func check_deposit() : async Result.Result<Text, Text> {
         let deposit = await icrc_canister.icrc1_balance_of({
             owner = Principal.fromActor(this);
@@ -356,7 +285,6 @@ shared actor class DAO() = this {
         #err("Deposit address empty")
     };
 
-    //TEST
     public shared ({ caller }) func withdraw(address : Principal, amount : Float) : async Result.Result<Text, Text> {
         if (A.isAnonymous(caller)) return #err("anonymous not allowed");
         if (has_enough_balance(caller, amount)) {
@@ -370,7 +298,7 @@ shared actor class DAO() = this {
                 created_at_time = null;
                 amount = Int.abs(Float.toInt(amount * 100000000)) //decimals
             });
-            return #ok("withdraal success") //TODO check
+            return #ok("withdraal success")
         };
         #err("no balance")
     };
@@ -381,6 +309,7 @@ shared actor class DAO() = this {
 
     type DepositAddressInfo = {
         principal : Principal;
+        callerPrincipal : Text;
         subaccount : [Nat8];
         accountid : Text
     };
@@ -389,7 +318,8 @@ shared actor class DAO() = this {
         return {
             principal = Principal.fromActor(this);
             subaccount = Blob.toArray(A.principalToSubaccount(caller));
-            accountid = Hex.encode(Blob.toArray(generate_deposit_address(caller)))
+            accountid = Hex.encode(Blob.toArray(generate_deposit_address(caller)));
+            callerPrincipal = Principal.toText(caller)
         }
     };
 
@@ -820,7 +750,6 @@ shared actor class DAO() = this {
     var AGE_BONUS_START = 1.0;
     var AGE_BONUS_END = 1.25;
 
-    //TEST
     private func calculate_neuron_vp(neuron : Neuron) : Float {
         Debug.print("calculate_neuron_vp START");
         var lockup_bonus = LOCKUP_BONUS_START;
@@ -868,6 +797,32 @@ shared actor class DAO() = this {
         Debug.print("vp neuron id: " # debug_show (neuron.id) # " VP:" # debug_show (stake * age_bonus * lockup_bonus));
 
         return stake * age_bonus * lockup_bonus
+    };
+
+    type DebugInfo = {
+        my_principal : Principal;
+        min_vp_required : Nat;
+        proposal_vp_threshold : Nat;
+        is_quadratic : Bool;
+        current_vp_mode : VotingPowerLogic;
+        my_vp : Float;
+        internal_balance : Float
+
+    };
+
+    public shared ({ caller }) func get_debug_info() : async DebugInfo {
+        let debug_data = {
+            my_principal = caller;
+            min_vp_required = MIN_VP_REQUIRED;
+            proposal_vp_threshold = PROPOSAL_VP_THESHOLD;
+            is_quadratic = IS_QUADRATIC;
+            current_vp_mode = current_vp_mode;
+            my_vp = await get_voting_power(caller);
+            internal_balance = get_user_internal_balance(caller)
+        };
+        Debug.print(debug_show (caller));
+        // Debug.print(debug_show (debug_data));
+        return debug_data
     };
 
 }

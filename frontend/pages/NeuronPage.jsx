@@ -61,11 +61,11 @@ const NeuronPage = () => {
 
     return (
         <div className="flex flex-col items-center">
-            <p>id {Number(neuron?.id)}</p>
-            <p>stake {Number(neuron?.stake)}</p>
-            <p>creation {Number(neuron?.creation_date)}</p>
+            <p>ID: {Number(neuron?.id)}</p>
+            <p>Stake: {Number(neuron?.stake)} MBT</p>
+            <p>Creation Date {Number(neuron?.creation_date)}</p>
             <p>{Number(neuron?.dissolve_delay)} days</p>
-            <p>{JSON.stringify(neuron?.state)}</p>
+            <p>State: {JSON.stringify(neuron?.state)}</p>
             <button onClick={startdissolve}>
                 Start Dissolve
             </button>

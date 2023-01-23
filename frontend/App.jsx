@@ -37,15 +37,11 @@ import ProposalPage from "./pages/ProposalPage"
 import RootLayout from './layouts/RootLayout';
 import { PlugWallet } from "@connect2ic/core/providers/plug-wallet"
 
-import { Transfer } from "./components/Transfer"
-import { Profile } from "./components/Profile"
 
 function App() {
 
   const [deposit, setDeposit] = useState({})
-  const [sendAmount, setSendAmount] = useState(0)
-  const [withAmount, setWithAmount] = useState(0)
-  const [withPrincipal, setWithPrincipal] = useState(0)
+  const [sendAmount, setSendAmount] = useState()
   const [isConnected, setIsConnected] = useState(false)
   const [wallet] = useWallet()
   const [auth_dao, { loading, error }] = useCanister("DAO")
@@ -142,7 +138,11 @@ function App() {
       console.log(principal)
       console.log("CONNECTED: ")
       let address = await auth_dao.get_deposit_address_info();
-      // console.log(address)
+      // if (address.callerPrincipal === "2vxsx-fae") {
+      //   [auth_ledger] = useCanister("ledger")
+      //   [auth_dao, { loading, error }] = useCanister("DAO")
+      //   await init(principal);
+      // }
       setDeposit(address)
       setIsConnected(true)
       let debug_infos = await auth_dao.get_debug_info()
@@ -186,15 +186,26 @@ function App() {
 
   return (
     <>
-      <div>
-        <img src={logo} className="logo h-28" alt="logo" />
+
+      <div className="flex flex-row w-96 p-6 px-12  absolute top-0 right-0">
+        {isConnected ?
+          <div className="flex flex-row mr-12 justify-evenly">
+            <Link className="mr-12 " to="/dao">DAO</Link>
+            <Link to="/neurons">Neurons</Link>
+          </div>
+          : null}
+
+        <a className="content-end items-end self-end" href="https://tpyud-myaaa-aaaap-qa4gq-cai.ic0.app/">Webpage </a>
       </div>
-      <h1 className="text-5xl">Bootcamp DAO</h1>
-      <div className="space-x-4">
+
+      <div className="p-6  absolute top-0 flex flex-col self-center justify-center justify-items-center justify-self-center content-center">
+        <img src={logo} className="logo h-28 justify-self-center justify-self-center" alt="logo" />
+        <h1 className="text-5xl">Bootcamp DAO</h1>
       </div>
 
       {isConnected ?
         <div>
+          <p className="text-lg m-5"> WARNING: Initial page load doesnt authorize the canister calls for some reason, go to DAO/Neuron page and come back to fix</p>
           <div>
             <p>Your ledger balance: {Number(ledgerBalance)} MBT</p>
             <p>Your Voting Power: {votingPower}</p>
@@ -209,27 +220,25 @@ function App() {
           </div>
 
           <div>
-            <input className="text-black  w-5/12" type="text"
-              value={sendAmount}
-              placeholder="Amount"
-              onChange={(e) => setSendAmount(e.target.value)}></input>
-            <button onClick={dotransferaccount}>Tranfer to deposit address</button>
-          </div>
-          <button onClick={check_deposit}>Check Deposit</button>
-          <div>
-            <button onClick={withdraw}>Withdraw to ledger (current principal)</button>
-          </div>
-          <button onClick={create_debug_neuron}>Create debug neuron (immediately dissolvable, 10 MBT required)</button>
-          <div>
-            <Link to="/dao">DAO</Link>
-            <br></br>
-            <Link to="/neurons">Neurons</Link>
-            <p>Deposit account id (use to load tokens in the DAO): {deposit?.accountid}</p>
+            <div>
+              <input className="text-black  w-5/12 mr-10" type="text"
+                value={sendAmount}
+                placeholder="Amount"
+                onChange={(e) => setSendAmount(e.target.value)}></input>
+              <button className=" mr-10" onClick={dotransferaccount}>Tranfer to deposit address</button>
+              <button onClick={check_deposit}>Check Deposit</button>
+            </div>
+            <div className=" mb-8">
+              <button onClick={withdraw}>Withdraw to ledger (current principal)</button>
+            </div>
+            <button className=" mb-8" onClick={create_debug_neuron}>Create debug neuron (immediately dissolvable, 10 MBT required)</button>
+            <div>
+              <p>Deposit account id (use to load tokens in the DAO): {deposit?.accountid}</p>
+            </div>
           </div>
         </div>
         : <p>Login to access functionality</p>}
       <div>
-        <a href="https://tpyud-myaaa-aaaap-qa4gq-cai.ic0.app/">Webpage </a>
       </div>
     </>
 

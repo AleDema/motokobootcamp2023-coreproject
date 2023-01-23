@@ -12,6 +12,10 @@ import Principal "mo:base/Principal";
 
 module Identity {
 
+    private func _isOwner(caller : Principal, canister_owner : Principal) : Bool {
+        return (caller == canister_owner)
+    };
+
     public func isAnonymous(caller : Principal) : Bool {
         Principal.equal(caller, Principal.fromText("2vxsx-fae"))
     };

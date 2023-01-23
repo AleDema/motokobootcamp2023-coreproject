@@ -29,10 +29,10 @@ actor Webpage {
 
     //must be called on init to work
     public shared ({ caller }) func update_body(msg : Text) : async () {
-        //TODO UPDATE FOR MAINNET
+        //TEST FOR MAINNET
         Debug.print("update_body " # debug_show (Principal.fromText(DAO_principal)) # " caller: " # Principal.toText(caller));
 
-        //if (not Principal.equal(caller, Principal.fromText(DAO_principal))) return;
+        if (not Principal.equal(caller, Principal.fromText(DAO_principal))) return;
         body := msg;
         update_asset_hash();
         Debug.print("body updated: " # msg)
