@@ -52,7 +52,8 @@ Alternately, step by step, you can run
 ```
 
 
-☑️ Requirements
+## ☑️ Requirements
+
 The goal for this edition is to build a DAO (Decentralized Autonomous Organization) with the following requirements:
 
 The DAO is controlling a webpage and is able to modify the text on that page through proposals.
