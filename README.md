@@ -44,7 +44,7 @@ owner = principal \"your-principal\";
 
 Alternately, step by step, you can run
 
-```bash
+```
     change IS_LOCAL_ENV to "true" in Webpage.mo and main.mo
     change the ledger canister id in App.jsx
     dfx deploy (webpage, DAO)
